@@ -17,7 +17,6 @@ load_dotenv()
 from flask import Flask, render_template, Response, request, send_file, jsonify
 import cv2
 from pathlib import Path           # para manejar rutas de forma portable
-from mss import mss
 
 import numpy as np
 from flask_socketio import SocketIO, emit
@@ -27,7 +26,6 @@ import base64
 import requests
 from tempfile import NamedTemporaryFile
 
-from skimage.metrics import structural_similarity as ssim
 
 from openai import OpenAI
 client = OpenAI(api_key=os.getenv("WHISPER_KEY"))  
