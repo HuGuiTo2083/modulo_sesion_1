@@ -1,0 +1,47 @@
+body{
+    background-color:#7aa8ed
+}
+
+.mainDiv{
+    width: 100%;
+    height: auto;
+    display: grid;
+    grid-template-columns:  1fr 0.5fr;
+    background-color: aquamarine;
+}
+
+.myScreenDiv{
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+
+    align-items: center;
+}
+
+.myScreenDiv img{
+    width: 600px;
+    height: 550px;
+}
+
+
+#status{
+    margin-top: 30px;
+    width: 100%;
+    height: 300px;
+    border-radius: 1rem;
+    border: black solid 5px;
+    overflow-y: auto;
+    box-sizing: border-box;
+    padding: 20px;
+}
+
+.myHeader{
+    width: 100%;
+    height: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+}
+

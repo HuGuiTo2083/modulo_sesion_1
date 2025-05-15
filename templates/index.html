@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Monitoreo de Pantalla</title>
+    <style>
+        body{font-family:Arial,Helvetica,sans-serif;;margin:0;padding:1rem}
+        h1{text-align:center;margin-bottom:1rem}
+        #cams{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1rem}
+        .camBox{background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:.5rem}
+        .camBox h3{margin:.2rem 0;text-align:center;font-size:1rem;color:#2c3e50}
+        .camBox img{width:100%;border-radius:6px}
+    </style>
+    <link href="../static/styles.css" type="text/css" rel="stylesheet">
+</head>
+<body>
+    <div class="myHeader">
+        <h1>Monitoreo Inteligente de Pantalla</h1>
+        <button id="startAll">Empezar</button>
+
+        <button id="downloadAll">Descargar Registros de Eventos</button>
+
+    </div>
+    <div class="mainDiv">
+
+        <div class="myScreenDiv">
+            <video id="myDivScreen" autoplay playsinline style="width:100%; height:auto;"></video>
+        </div>
+   <!-- Contenedor del stream -->
+   <div id="cams">
+   
+      
+  
+      
+</div>
+    </div>
+ 
+
+    <!-- Estado de la actividad -->
+    <div id="status">
+        Aplicación actual: <span id="currentWindow"></span>
+    </div>
+
+    <!-- Scripts para WebSocket -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+   <!-- Reemplaza tu <script> de recorder.js por esta línea: -->    
+    <!-- Carga el UMD build directamente desde la rama principal -->    
+    <script src="https://cdn.jsdelivr.net/gh/mattdiamond/Recorderjs@master/dist/recorder.js"></script>
+
+
+    <script src="tu-script.js"></script>
+    
+    <script src="../static/scripts.js"></script>
+
+
+    <script>
+       const socket = io();
+
+        const statusSpan = document.getElementById('currentWindow');
+        // Escuchar cambios de ventana
+        socket.on('gesture_event', (data) => {
+            // CONCATENAR interpretando el <br> como HTML
+    statusSpan.innerHTML += data.message + '<br>';
+            
+        });
+    </script>
+</body>
+</html>
