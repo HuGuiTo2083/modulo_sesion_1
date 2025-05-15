@@ -28,7 +28,7 @@ import requests
 from tempfile import NamedTemporaryFile
 
 from skimage.metrics import structural_similarity as ssim
-import sounddevice as sd
+
 from openai import OpenAI
 client = OpenAI(api_key=os.getenv("WHISPER_KEY"))  
 
@@ -75,19 +75,7 @@ pathlib.Path.symlink_to = lambda self, target, *a, **kw: _safe_symlink(
 
 import math
 
-# Speaker diarization (pyannote)
-from transformers import pipeline   # Hugging Face Transformers
-# Emotion recognition (speechbrain)
 
-
-
-
-
-
-
-#---------------DUDOSO ESTOS IMPORTS-----------
-import sounddevice as sd
-from sounddevice import PortAudioError
 #----------------------------------------------
 
 app = Flask(__name__)
