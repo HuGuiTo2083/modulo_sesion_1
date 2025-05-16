@@ -41,28 +41,15 @@
         Aplicación actual: <span id="currentWindow"></span>
     </div>
 
-    <!-- Scripts para WebSocket -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-   <!-- Reemplaza tu <script> de recorder.js por esta línea: -->    
+ s
     <!-- Carga el UMD build directamente desde la rama principal -->    
     <script src="https://cdn.jsdelivr.net/gh/mattdiamond/Recorderjs@master/dist/recorder.js"></script>
 
 
-    <script src="tu-script.js"></script>
     
     <script src="../static/scripts.js"></script>
 
 
-    <script>
-       const socket = io();
-
-        const statusSpan = document.getElementById('currentWindow');
-        // Escuchar cambios de ventana
-        socket.on('gesture_event', (data) => {
-            // CONCATENAR interpretando el <br> como HTML
-    statusSpan.innerHTML += data.message + '<br>';
-            
-        });
     </script>
 </body>
 </html>
