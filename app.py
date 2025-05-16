@@ -20,7 +20,6 @@ import cv2
 from pathlib import Path           # para manejar rutas de forma portable
 
 import numpy as np
-from flask_socketio import SocketIO, emit
 
 from datetime import datetime  
 import base64
@@ -82,7 +81,6 @@ app.config['SECRET_KEY'] = 'tu_clave_secreta'  # Cambia esto en producción!
 
 
 
-socketio = SocketIO(app, cors_allowed_origins="*")
 # justo debajo de `socketio = SocketIO(...)`
 log_buffer = []
 audio_b_buffer = []
@@ -735,13 +733,14 @@ def transcribe_audio():
         reduced_bytes = reduce_wav_size_bytes(input_bytes)
 
         # Enviar a Whisper para transcripción
-        with io.BytesIO(reduced_bytes) as f:
-            resp = client.audio.transcriptions.create(
-                model="whisper-1",
-                file=f,
-                language="es",
-                response_format="json"  # evitamos el bug
-            )
+        buf = io.BytesIO(reduced_bytes)
+        buf.name = audio_file.filename or "audio.wav"   # ← aquí
+        resp = client.audio.transcriptions.create(
+        model="whisper-1",
+        file=buf,
+        language="es",
+        response_format="json"
+    )
 
         text = resp["text"] if isinstance(resp, dict) else resp.text
         audio_a_buffer.append(text)
