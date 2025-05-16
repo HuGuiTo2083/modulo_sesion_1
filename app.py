@@ -5,6 +5,7 @@ import audioop
 import random
 from dotenv import load_dotenv
 import os
+#hola
 # Sobrescribe el contexto HTTPS por defecto para que use el .pem de certifi
 def _create_https_context():
     # Crea un nuevo contexto en cada llamada
