@@ -4,7 +4,7 @@ import wave
 import audioop
 import random
 from dotenv import load_dotenv
-
+import os
 # Sobrescribe el contexto HTTPS por defecto para que use el .pem de certifi
 def _create_https_context():
     # Crea un nuevo contexto en cada llamada
@@ -41,7 +41,7 @@ from concurrent.futures import ThreadPoolExecutor
 # crea un pool global con 1-2 hilos máximo
 ai_executor = ThreadPoolExecutor(max_workers=3)
 # ─── Evitar errores de symlinks en Windows ────────────────────────────────────
-import os, shutil, errno, pathlib
+import shutil, errno, pathlib
 _original_symlink = os.symlink          # ← guardamos la implementación real
 
 def _safe_symlink(src, dst, target_is_directory=False):
