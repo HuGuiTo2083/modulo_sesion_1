@@ -21,6 +21,15 @@ let mainTranscription
 // 1) Arranca ambos recorders
 
 async function startRecordingAllMics() {
+  const myHeader2 = document.getElementById('myHeader')
+  const micSelector = document.createElement('select');
+  micSelector.id = 'mic-selector';
+
+  const myOption1 = document.createElement('option')
+  myOption1.textContent= "Micrófonos"
+
+  micSelector.appendChild(myOption1)
+
   try {
     // 1) Pide permiso global y luego lo libera
     const temp = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -32,7 +41,19 @@ async function startRecordingAllMics() {
 
     // 3) Abre cada micrófono y recoge su pista en un array
     const tracks = await Promise.all(
-      mics.map(async (mic) => {
+      mics.map(async (mic, index) => {
+        //---------------LOGICA PARA AGREGAR MICROFONOS AL SELECT
+         const option = document.createElement('option');
+      option.value = mic.deviceId;
+      
+      // Mostrar nombre del micrófono si está disponible
+      if (mic.label) {
+        option.textContent = `${mic.label} (Mic ${index + 1})`;
+      } else {
+        option.textContent = `Micrófono ${index + 1} (ID: ${mic.deviceId.slice(0, 10)}...)`;
+      }
+   micSelector.appendChild(option)
+      //---------
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: { deviceId: { exact: mic.deviceId } }
         });
@@ -67,14 +88,18 @@ async function startRecordingAllMics() {
     fullRecorder.record();
     partialRecorder.record();
 
+    myHeader2.appendChild(micSelector)
+
     // 10) Cada 10 segundos corta el chunk y lo envía
     chunkTimer = setInterval(() => {
+      //huhm
       if(myBoolean){
       console.log('Entró')
       partialRecorder2.stop();
       partialRecorder2.exportWAV(async (blob) => {
         const form = new FormData();
         form.append("audio", blob, `chunk-${Date.now()}.wav`);
+        
         const res = await fetch("/process_audio", {
           method: "POST",
           body: form
@@ -92,6 +117,7 @@ async function startRecordingAllMics() {
 
     // 11) Transcripción a los 2 minutos (después de enviar el primer fragmento)
     setInterval(async () => {
+      //huhm
       if(myBoolean){
           // Detenemos la grabación después de 2 minutos
       console.log("se entroooo---------------")
@@ -301,8 +327,10 @@ async function startScreenShare() {
         currentFrame = canvas.toDataURL('image/png');
     
         // Enviar el frame al servidor Flask
-       
+
+        //huhm
         try {
+         
           const response = await fetch('/upload_frame', {
             method: 'POST',
             headers: {
@@ -337,6 +365,20 @@ async function startScreenShare() {
 
 async function listAndShowCams() {
   const camsContainer = document.getElementById('cams');
+   const myHeader = document.getElementById('myHeader')
+ 
+   const option1 = document.createElement('option');
+    option1.value = 0;
+    option1.textContent = "Cámaras"
+  
+  const cameraSelector = document.createElement('select');
+  cameraSelector.id = 'camera-selector';
+  cameraSelector.style.padding = '5px';
+  cameraSelector.style.fontSize = '16px';
+  cameraSelector.appendChild(option1)
+
+
+  
 
   try {
     await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -348,7 +390,7 @@ async function listAndShowCams() {
   const devices = await navigator.mediaDevices.enumerateDevices();
   const videoInputs = devices.filter(device => device.kind === 'videoinput');
   camsContainer.innerHTML = '';
-
+console.log('cams: ' + videoInputs)
   // Array para almacenar objetos con video y canvas para cada cámara
   const activeCams = [];
 
@@ -356,6 +398,23 @@ async function listAndShowCams() {
     const device = videoInputs[i];
 
     try {
+
+      //--------------parte para el menu de camaras:
+const option = document.createElement('option');
+    option.value = i+1;
+    
+    // Usar el nombre real si está disponible
+    if (device.label) {
+      option.textContent = `${device.label} (Cámara ${i + 1})`;
+    } else {
+      // Caso de respaldo (debería ser raro después del permiso)
+      option.textContent = `Cámara ${i + 1} - ${device.deviceId.slice(0, 10)}`;
+    }
+    
+    option.title = `ID: ${device.deviceId}`; // Tooltip
+    
+    cameraSelector.appendChild(option);
+      //------------------------------
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { deviceId: { exact: device.deviceId } },
         audio: false
@@ -369,13 +428,14 @@ async function listAndShowCams() {
       camBox.appendChild(title);
 
       const video = document.createElement('video');
+      video.id = `myCamera${i+1}`
       video.autoplay = true;
       video.playsInline = true;
       video.width = 320;
       video.height = 240;
       video.srcObject = stream;
       camBox.appendChild(video);
-
+     console.log('hola')
       camsContainer.appendChild(camBox);
 
       // Crear canvas para capturar frames
@@ -389,6 +449,7 @@ async function listAndShowCams() {
     } catch (err) {
       console.warn(`No se pudo acceder a la cámara ${device.label}:`, err);
     }
+    myHeader.appendChild(cameraSelector)
   }
 
   // Función para capturar y enviar frames
@@ -399,23 +460,23 @@ async function listAndShowCams() {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const frameBase64 = canvas.toDataURL('image/jpeg'); // Base64 jpg
 
-        try {
-          const response = await fetch('/upload_frame2', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              deviceId,
-              image: frameBase64
-            })
-          });
-          if (!response.ok) {
-            console.error(`Error enviando frame de cámara ${index + 1}`);
-          } else {
-            // Opcional: console.log(`Frame cámara ${index + 1} enviado`);
-          }
-        } catch (error) {
-          console.error(`Error en fetch para cámara ${index + 1}:`, error);
-        }
+        // try {
+        //   const response = await fetch('/upload_frame2', {
+        //     method: 'POST',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify({
+        //       deviceId,
+        //       image: frameBase64
+        //     })
+        //   });
+        //   if (!response.ok) {
+        //     console.error(`Error enviando frame de cámara ${index + 1}`);
+        //   } else {
+        //     // Opcional: console.log(`Frame cámara ${index + 1} enviado`);
+        //   }
+        // } catch (error) {
+        //   console.error(`Error en fetch para cámara ${index + 1}:`, error);
+        // }
       }
     });
   }
@@ -425,13 +486,13 @@ async function listAndShowCams() {
 }
 
 
-
 const  myStartBt = document.getElementById('startAll')
 
 myStartBt.addEventListener('click', ()=>{
   myStartBt.disabled = true;
   startRecordingAllMics();
   listAndShowCams();
+
 startScreenShare();
 
 })
