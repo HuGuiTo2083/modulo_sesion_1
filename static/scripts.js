@@ -347,6 +347,8 @@ async function startScreenShare() {
         } catch (error) {
           console.error('Error en fetch:', error);
         }
+
+        
       }
     }
     
@@ -400,7 +402,7 @@ console.log('cams: ' + videoInputs)
     try {
 
       //--------------parte para el menu de camaras:
-const option = document.createElement('option');
+    const option = document.createElement('option');
     option.value = i+1;
     
     // Usar el nombre real si está disponible

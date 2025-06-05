@@ -1,47 +1,50 @@
-body{
-    background-color:#7aa8ed
-}
-
-.mainDiv{
-    width: 100%;
-    height: auto;
-    display: grid;
-    grid-template-columns:  1fr 0.5fr;
-    background-color: aquamarine;
-}
-
-.myScreenDiv{
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-
-    align-items: center;
-}
-
-.myScreenDiv img{
-    width: 600px;
-    height: 550px;
+:root{
+    --first: #1b2f38;
+    --second: #8f1724;
+    --third: #e59903;
+    --fourth: #b3c6cf;
 }
 
 
-#status{
-    margin-top: 30px;
-    width: 100%;
-    height: 300px;
-    border-radius: 1rem;
-    border: black solid 5px;
-    overflow-y: auto;
-    box-sizing: border-box;
-    padding: 20px;
+@font-face {
+    font-family: Monserrat;
+    src: url('../fonts/Montserrat/Montserrat-VariableFont_wght.ttf');
 }
 
-.myHeader{
-    width: 100%;
-    height: 100px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
+@font-face {
+    font-family: 'DM Serif';
+    src: url('../fonts/DM_Serif_Display/DMSerifDisplay-Regular.ttf');
 }
+
+
+/* ========= 1. Background sólido ========= */
+.bcFirst  { background-color: var(--first);  }
+.bcSecond { background-color: var(--second); }
+.bcThird  { background-color: var(--third);  }
+.bcFourth { background-color: var(--fourth); }
+
+/* ========= 2. Background degradado ========= */
+/* 1–2, 2–3, 3–4, 4–1 (puedes crear otros pares igual) */
+.bcFirstSecond  { background: linear-gradient(135deg, var(--first),  var(--second)); }
+.bcSecondThird  { background: linear-gradient(135deg, var(--second), var(--third));  }
+.bcThirdFourth  { background: linear-gradient(135deg, var(--third),  var(--fourth)); }
+.bcFourthFirst  { background: linear-gradient(135deg, var(--fourth), var(--first)); }
+
+/* ========= 3. Color de texto ========= */
+.cFirst  { color: var(--first);  }
+.cSecond { color: var(--second); }
+.cThird  { color: var(--third);  }
+.cFourth { color: var(--fourth); }
+
+
+.ff1{
+    font-family: 'DM Serif';
+}
+
+.ff2{
+    font-family: 'Monserrat';
+}
+
+
+
 

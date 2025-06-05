@@ -318,6 +318,9 @@
     grid-template-rows: 1fr;
 }
 
+.gtr_1_auto{
+  grid-template-rows: 1fr auto;
+}
 
 
 .gtr_1_4{
@@ -1681,7 +1684,9 @@ border-radius: 50%;
 .top180 { top: 180px; }
 .top190 { top: 190px; }
 .top200 { top: 200px; }
-
+.top10vh{
+  top: 10vh;
+}
 
 /* ----------------- */
 
