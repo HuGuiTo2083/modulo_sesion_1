@@ -37,6 +37,11 @@
 .cFourth { color: var(--fourth); }
 
 
+.select{
+    background-color:   #6a111a !important;
+    color: white !important;
+}
+
 .ff1{
     font-family: 'DM Serif';
 }
