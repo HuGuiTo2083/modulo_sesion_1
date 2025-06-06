@@ -15,24 +15,42 @@
     <link href="../static/myClasses.css" type="text/css" rel="stylesheet">
 
 </head>
-<body class="bcFirst m0 p0 oHidden">
+<body class="bcFirst m0 p0 oxHidden">
     <div class="dGrid gtc_1 gtr_1_7  w100vw h100vh">
  <!-----------------------------------------------------Parte del header----- -->
 
         <div class="w100 h100 dGrid gtc_1 gtr_1_1 mb20 gap10" id="myHeader">
             <!--------------------------------Titulo----- -->
-            <div class="dFlex aiCenter jcCenter cWhite ff2 fw500 fs6"> Monitoreo Inteligente de Pantalla</div>
+            <div class="dFlex aiCenter jcCenter cThird ff1 fw500 fs6"> Monitoreo Inteligente de Pantalla</div>
             <!--------------------------------Botones----- -->
 
            <div class="w100 h100  dFlex aiCenter jcCenter gap20">
-             <button class="cPointer w20 h10vh bcThird bNone br10px ff1 fs4 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="startAll">Empezar</button>
+             <button class="cPointer w20 h10vh bcThird bNone br10px ff2 fs4 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="startAll">Empezar</button>
     
-             <button class="cPointer w25 h10vh bcThird bNone br10px ff1 fs3 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="downloadAll">Descargar Registros de Eventos</button>
+             <button class="cPointer w25 h10vh bcThird bNone br10px ff2 fs3 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="downloadAll">Descargar Registros de Eventos</button>
+                <!-- ----parte para video -->
+             <div class="w10 h100  dFlex jcCenter aiCenter pRelative">
+                <button class="cPointer w100 h10vh bcThird bNone br10px ff2 fs3 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="btVideo">Video ▼</button>
+                <!-- ------ desplegable de video ------- -->
+                <div class="pAbsolute left0 top10vh w20vw min_h10vh hAuto  bcThird mt20 dNone br10px   aiCenter aiCenter fdColumn bsBorderBox p10 gap20" id="divVideo">
+                    
+                   </div>
+                   
 
-             <div class="w10 h100 bcRed dFlex jcCenter aiCenter pRelative">
-                <button class="cPointer w100 h10vh bcFourth bNone br10px ff1 fs3 dFlex aiCenter jcCenter hoverLight trans0-5 cThird" id="btVideo">Video</button>
-                <div class="pAbsolute left0 top10vh w20vw h10vh bcGreen mt20">
-                </div> 
+                
+                <!-- ---------------------- -->
+             </div>
+             <!-- -------------parte para audio ------------- -->
+                <div class="w10 h100  dFlex jcCenter aiCenter pRelative">
+                <button class="cPointer w100 h10vh bcThird bNone br10px ff2 fs3 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="btAudio">Audio ▼</button>
+                <!-- ------ desplegable de audio ------- -->
+                <div class="pAbsolute left0 top10vh w20vw min_h10vh hAuto  bcThird mt20 dNone br10px   aiCenter aiCenter fdColumn bsBorderBox p10 gap20" id="divAudio">
+                    
+                   </div>
+                   
+
+                
+                <!-- ---------------------- -->
              </div>
          </div>
             <!----------------------------------- -->
@@ -40,13 +58,13 @@
     
         </div>
 <!------------------------------------------------------Parte de las camaras----- -->
-    <div class="w100 h100 bcBlue">
+    <div class="w100 h100  dFlex gap20 bsBorderBox p10 dFlex">
         <!-- Contenedor del stream -->
-        <div class="myScreenDiv">
+        <div class=" hAuto w70 dFlex jcCenter aiCenter bsBorderBox p10 br10px bcSecond ">
             <video id="myDivScreen" autoplay playsinline style="width:100%; height:auto;"></video>
         </div>
         <!-- Contenedor de camaras -->
-        <div id="cams">
+        <div id="cams" class=" w25 bcSecond br10px bsBorderBox">
    
     
             </div>
@@ -62,6 +80,7 @@
     <!-- Carga el UMD build directamente desde la rama principal -->    
     <script src="https://cdn.jsdelivr.net/gh/mattdiamond/Recorderjs@master/dist/recorder.js"></script>
 
+    <script src="../static/funcionalidad.js"></script>
 
     
     <script src="../static/scripts.js"></script>

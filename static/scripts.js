@@ -1,3 +1,102 @@
+// Función para subir todos los archivos de una vez
+
+// Función para obtener contenido de un archivo
+async function getFileContent(url) {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`Error ${resp.status} al obtener ${url}`);
+  return await resp.text();
+}
+
+
+async function uploadAllFilesAtOnce() {
+
+  try {
+    // Definir los archivos a procesar
+    const fileConfigs = [
+      { url: '/download_log', filename: 'A_Eye.txt' },
+      { url: '/download_screen', filename: 'B_Eye.txt' },
+      { url: '/download_audio_b', filename: 'B_Ear.txt' },
+      { url: '/download_eye_c', filename: 'C_Eye.txt' }
+    ];
+
+
+    const filesData = [];
+
+    for (let i = 0; i < fileConfigs.length; i++) {
+      const config = fileConfigs[i];
+
+      try {
+        const content = await getFileContent(config.url);
+        filesData.push({
+          filename: config.filename,
+          content: content
+        });
+        console.log(`✅ Contenido obtenido: ${config.filename}`);
+      } catch (error) {
+        console.error(`❌ Error obteniendo ${config.filename}:`, error);
+        // Continuar con los otros archivos
+        filesData.push({
+          filename: config.filename,
+          content: `Error al obtener contenido: ${error.message}`
+        });
+      }
+    }
+
+
+    const response = await fetch('/upload-multiple-files', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        files: filesData
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      
+
+      console.log('🎉 Resultado de subida:', result);
+
+      // Mostrar detalles
+      result.results.forEach(file => {
+        if (file.success) {
+          console.log(`✅ ${file.filename} - Subido exitosamente`);
+        } else {
+          console.error(`❌ ${file.filename} - Error: ${file.error}`);
+        }
+      });
+
+      // Opcional: abrir la carpeta de Drive
+      if (result.folder_link) {
+        const openFolder = confirm(
+          `Archivos subidos exitosamente!\n` +
+          `• Exitosos: ${result.summary.successful}\n` +
+          `• Fallidos: ${result.summary.failed}\n\n` +
+          `¿Quieres abrir la carpeta en Google Drive?`
+        );
+        if (openFolder) {
+          window.open(result.folder_link, '_blank');
+        }
+      }
+
+    } else {
+      throw new Error(result.error);
+    }
+
+    
+
+  } catch (e) {
+    console.error('❌ Error en subida:', e);
+    
+    
+    alert('Hubo un error al subir los archivos: ' + e.message);
+  }
+}
+
+
 async function downloadFile(url, filename) {
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`Error ${resp.status}`);
@@ -21,14 +120,8 @@ let mainTranscription
 // 1) Arranca ambos recorders
 
 async function startRecordingAllMics() {
-  const myHeader2 = document.getElementById('myHeader')
-  const micSelector = document.createElement('select');
-  micSelector.id = 'mic-selector';
 
-  const myOption1 = document.createElement('option')
-  myOption1.textContent= "Micrófonos"
 
-  micSelector.appendChild(myOption1)
 
   try {
     // 1) Pide permiso global y luego lo libera
@@ -43,17 +136,22 @@ async function startRecordingAllMics() {
     const tracks = await Promise.all(
       mics.map(async (mic, index) => {
         //---------------LOGICA PARA AGREGAR MICROFONOS AL SELECT
-         const option = document.createElement('option');
-      option.value = mic.deviceId;
-      
-      // Mostrar nombre del micrófono si está disponible
-      if (mic.label) {
-        option.textContent = `${mic.label} (Mic ${index + 1})`;
-      } else {
-        option.textContent = `Micrófono ${index + 1} (ID: ${mic.deviceId.slice(0, 10)}...)`;
-      }
-   micSelector.appendChild(option)
-      //---------
+        const option = document.createElement('div');
+        option.className = 'cPointer br10px w95 h50px bcSecond fShrink0 dFlex jcCenter aiCenter cThird ff2 fw500 fs1 select taCenter'
+        option.setAttribute('data-value', index + 1)
+        option.id = `myAudio${index + 1}`
+
+        // Mostrar nombre del micrófono si está disponible
+        if (mic.label) {
+          option.innerHTML = `${mic.label} (Mic ${index + 1})`;
+        } else {
+          option.innerHTML = `Micrófono ${index + 1} (ID: ${mic.deviceId.slice(0, 10)}...)`;
+        }
+        option.addEventListener('click', () => { option.classList.toggle('select') })
+
+        const myDivAudio = document.getElementById('divAudio')
+        myDivAudio.appendChild(option)
+        //---------
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: { deviceId: { exact: mic.deviceId } }
         });
@@ -83,12 +181,11 @@ async function startRecordingAllMics() {
     // 9) Ahora **graba** desde mixGain, no desde destination
     fullRecorder = new Recorder(mixGain, { numChannels: 1 }); // Para el archivo completo
     partialRecorder = new Recorder(mixGain, { numChannels: 1 }); // Para el segundo segmento (de 2:01 a 4:00)
-    partialRecorder2  = new Recorder(mixGain, { numChannels: 1 });
+    partialRecorder2 = new Recorder(mixGain, { numChannels: 1 });
 
     fullRecorder.record();
     partialRecorder.record();
 
-    myHeader2.appendChild(micSelector)
 
     // 10) Cada 10 segundos corta el chunk y lo envía
     chunkTimer = setInterval(() => {
@@ -99,7 +196,7 @@ async function startRecordingAllMics() {
       partialRecorder2.exportWAV(async (blob) => {
         const form = new FormData();
         form.append("audio", blob, `chunk-${Date.now()}.wav`);
-        
+
         const res = await fetch("/process_audio", {
           method: "POST",
           body: form
@@ -112,44 +209,44 @@ async function startRecordingAllMics() {
         partialRecorder2.record();
       });
       }
-      
+
     }, 10_000);
 
     // 11) Transcripción a los 2 minutos (después de enviar el primer fragmento)
     setInterval(async () => {
       //huhm
-      if(myBoolean){
-          // Detenemos la grabación después de 2 minutos
-      console.log("se entroooo---------------")
-      partialRecorder.stop();
-      
-      // Enviar el primer segmento (0-2 minutos) para transcripción
-      partialRecorder.exportWAV(async (blob) => {
-        const form = new FormData();
-        form.append("audio", blob, `full-audio-0-2-${Date.now()}.wav`);
-        const res = await fetch("/transcribe", {
-          method: "POST",
-          body: form
+        if(myBoolean){
+            // Detenemos la grabación después de 2 minutos
+        console.log("se entroooo---------------")
+        partialRecorder.stop();
+
+        // Enviar el primer segmento (0-2 minutos) para transcripción
+        partialRecorder.exportWAV(async (blob) => {
+          const form = new FormData();
+          form.append("audio", blob, `full-audio-0-2-${Date.now()}.wav`);
+          const res = await fetch("/transcribe", {
+            method: "POST",
+            body: form
+          });
+          const { transcription } = await res.json();
+          console.log('Transcripción recibida:', transcription);
+          const now = new Date();
+          // Opción A: hora local, formato HH:MM:SS
+          const timeStr = now.toLocaleTimeString(); 
+          mainTranscription += `------ ${timeStr} ------\n${transcription}\n\n`;
+          // Reiniciar la grabación para la segunda parte (2:01-4:00)
+
+
+
+
+          partialRecorder.clear();
+
+           // Crear una nueva instancia del recorder para la segunda parte
+      partialRecorder = new Recorder(mixGain, { numChannels: 1 });  // Crear un nuevo recorder
+      partialRecorder.record();
         });
-        const { transcription } = await res.json();
-        console.log('Transcripción recibida:', transcription);
-        const now = new Date();
-        // Opción A: hora local, formato HH:MM:SS
-        const timeStr = now.toLocaleTimeString(); 
-        mainTranscription += `------ ${timeStr} ------\n${transcription}\n\n`;
-        // Reiniciar la grabación para la segunda parte (2:01-4:00)
-       
+        }
 
-        
-
-        partialRecorder.clear();
-       
-         // Crear una nueva instancia del recorder para la segunda parte
-    partialRecorder = new Recorder(mixGain, { numChannels: 1 });  // Crear un nuevo recorder
-    partialRecorder.record();
-      });
-      }
-      
     }, 3 * 60 * 1000); // 2 minutos
 
     // 12) Habilita el botón para detener y descargar
@@ -200,7 +297,7 @@ async function stopAndDownloadFull() {
         console.log('Transcripción recibida:', transcription);
         const now = new Date();
         // Opción A: hora local, formato HH:MM:SS
-        const timeStr = now.toLocaleTimeString(); 
+        const timeStr = now.toLocaleTimeString();
         mainTranscription += `------ ${timeStr} ------\n${transcription}\n\n`;
         // Crear el archivo de texto con la transcripción
         const txtBlob = new Blob([mainTranscription], { type: 'text/plain' });
@@ -241,16 +338,22 @@ async function stopAndDownloadFull() {
 // Evento del botón: detiene el recorder (dispara onstop)
 document.getElementById('downloadAll').addEventListener('click', async () => {
   stopAndDownloadFull() //con esta llamada ya descarga como tal todo el audio de la sesión
+  // Usa:
   try {
-       await downloadFile('/download_log',    'A_Eye.txt');
-       await downloadFile('/download_screen', 'B_Eye.txt');
-    //   //await downloadFile('/download_audio',  'recording.wav');
-    await downloadFile('/download_audio_b', 'B_Ear.txt');
-    await downloadFile('/download_eye_c', 'C_Eye.txt');
+    await uploadAllFilesAtOnce();
   } catch (e) {
-    console.error('Descarga fallida:', e);
-    alert('Hubo un error al descargar: ' + e.message);
+    console.error('Subida fallida:', e);
+    alert('Hubo un error al subir: ' + e.message);
   }
+  // try {
+  //      await downloadFile('/download_log',    'A_Eye.txt');
+  //      await downloadFile('/download_screen', 'B_Eye.txt');
+  //   await downloadFile('/download_audio_b', 'B_Ear.txt');
+  //   await downloadFile('/download_eye_c', 'C_Eye.txt');
+  // } catch (e) {
+  //   console.error('Descarga fallida:', e);
+  //   alert('Hubo un error al descargar: ' + e.message);
+  // }
 });
 
 
@@ -272,9 +375,9 @@ async function downloadInformeContextual() {
 
     // 3) Crear un Blob de texto y forzar la descarga
     const txtBlob = new Blob([analysis], { type: 'text/plain' });
-    const txtUrl  = URL.createObjectURL(txtBlob);
-    const link    = document.createElement('a');
-    link.href     = txtUrl;
+    const txtUrl = URL.createObjectURL(txtBlob);
+    const link = document.createElement('a');
+    link.href = txtUrl;
     link.download = 'Informe_Contextual.txt';
     document.body.appendChild(link);
     link.click();
@@ -302,7 +405,7 @@ async function startScreenShare() {
   try {
     // Solicitar permiso y capturar la pantalla
     const stream = await navigator.mediaDevices.getDisplayMedia({
-      video: { cursor: "always" }, 
+      video: { cursor: "always" },
       audio: false
     });
 
@@ -325,12 +428,12 @@ async function startScreenShare() {
         canvas.height = video.videoHeight;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         currentFrame = canvas.toDataURL('image/png');
-    
+
         // Enviar el frame al servidor Flask
 
         //huhm
         try {
-         
+
           const response = await fetch('/upload_frame', {
             method: 'POST',
             headers: {
@@ -338,7 +441,7 @@ async function startScreenShare() {
             },
             body: JSON.stringify({ image: currentFrame })
           });
-    
+
           if (!response.ok) {
             console.error('Error enviando frame al servidor');
           } else {
@@ -348,10 +451,10 @@ async function startScreenShare() {
           console.error('Error en fetch:', error);
         }
 
-        
+
       }
     }
-    
+
     // Ejecutar cada 5 segundos
     setInterval(captureAndSendFrame, 10 * 1000);
 
@@ -367,24 +470,11 @@ async function startScreenShare() {
 
 async function listAndShowCams() {
   const camsContainer = document.getElementById('cams');
-   const myHeader = document.getElementById('myHeader')
- 
-   const option1 = document.createElement('option');
-    option1.value = 0;
-    option1.textContent = "Cámaras"
-  
-  const cameraSelector = document.createElement('select');
-  cameraSelector.id = 'camera-selector';
-  cameraSelector.style.padding = '5px';
-  cameraSelector.style.fontSize = '16px';
-  cameraSelector.appendChild(option1)
 
-
-  
 
   try {
     await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-  } catch(e) {
+  } catch (e) {
     console.warn("Permiso de cámara denegado o no disponible.", e);
     return;
   }
@@ -392,7 +482,7 @@ async function listAndShowCams() {
   const devices = await navigator.mediaDevices.enumerateDevices();
   const videoInputs = devices.filter(device => device.kind === 'videoinput');
   camsContainer.innerHTML = '';
-console.log('cams: ' + videoInputs)
+  console.log('cams: ' + videoInputs)
   // Array para almacenar objetos con video y canvas para cada cámara
   const activeCams = [];
 
@@ -402,20 +492,23 @@ console.log('cams: ' + videoInputs)
     try {
 
       //--------------parte para el menu de camaras:
-    const option = document.createElement('option');
-    option.value = i+1;
-    
-    // Usar el nombre real si está disponible
-    if (device.label) {
-      option.textContent = `${device.label} (Cámara ${i + 1})`;
-    } else {
-      // Caso de respaldo (debería ser raro después del permiso)
-      option.textContent = `Cámara ${i + 1} - ${device.deviceId.slice(0, 10)}`;
-    }
-    
-    option.title = `ID: ${device.deviceId}`; // Tooltip
-    
-    cameraSelector.appendChild(option);
+      const option = document.createElement('div');
+      option.className = 'cPointer br10px w95 h50px bcSecond fShrink0 dFlex jcCenter aiCenter cThird ff2 fw500 fs1 select taCenter'
+      option.setAttribute('data-value', i + 1)
+      option.id = `myVideo${i + 1}`
+      option.addEventListener('click', () => { option.classList.toggle('select') })
+      // Usar el nombre real si está disponible
+      if (device.label) {
+        option.innerHTML = `${device.label} (Cámara ${i + 1})`;
+      } else {
+        // Caso de respaldo (debería ser raro después del permiso)
+        option.innerHTML = `Cámara ${i + 1} - ${device.deviceId.slice(0, 10)}`;
+      }
+
+      // option.title = `ID: ${device.deviceId}`; // Tooltip
+      const myDivVideo = document.getElementById('divVideo')
+
+      myDivVideo.appendChild(option);
       //------------------------------
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { deviceId: { exact: device.deviceId } },
@@ -427,17 +520,19 @@ console.log('cams: ' + videoInputs)
 
       const title = document.createElement('h3');
       title.textContent = `Cámara ${i + 1}: ${device.label || 'Sin nombre'}`;
+      title.className = 'ff2 fw300 bsBorderBox p20'
       camBox.appendChild(title);
 
+
       const video = document.createElement('video');
-      video.id = `myCamera${i+1}`
+      video.id = `myCamera${i + 1}`
       video.autoplay = true;
       video.playsInline = true;
       video.width = 320;
       video.height = 240;
       video.srcObject = stream;
       camBox.appendChild(video);
-     console.log('hola')
+      console.log('hola')
       camsContainer.appendChild(camBox);
 
       // Crear canvas para capturar frames
@@ -451,7 +546,6 @@ console.log('cams: ' + videoInputs)
     } catch (err) {
       console.warn(`No se pudo acceder a la cámara ${device.label}:`, err);
     }
-    myHeader.appendChild(cameraSelector)
   }
 
   // Función para capturar y enviar frames
@@ -461,24 +555,24 @@ console.log('cams: ' + videoInputs)
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const frameBase64 = canvas.toDataURL('image/jpeg'); // Base64 jpg
-
-        // try {
-        //   const response = await fetch('/upload_frame2', {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify({
-        //       deviceId,
-        //       image: frameBase64
-        //     })
-        //   });
-        //   if (!response.ok) {
-        //     console.error(`Error enviando frame de cámara ${index + 1}`);
-        //   } else {
-        //     // Opcional: console.log(`Frame cámara ${index + 1} enviado`);
-        //   }
-        // } catch (error) {
-        //   console.error(`Error en fetch para cámara ${index + 1}:`, error);
-        // }
+//huhm
+        try {
+          const response = await fetch('/upload_frame2', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              deviceId,
+              image: frameBase64
+            })
+          });
+          if (!response.ok) {
+            console.error(`Error enviando frame de cámara ${index + 1}`);
+          } else {
+            // Opcional: console.log(`Frame cámara ${index + 1} enviado`);
+          }
+        } catch (error) {
+          console.error(`Error en fetch para cámara ${index + 1}:`, error);
+        }
       }
     });
   }
@@ -488,14 +582,14 @@ console.log('cams: ' + videoInputs)
 }
 
 
-const  myStartBt = document.getElementById('startAll')
+const myStartBt = document.getElementById('startAll')
 
-myStartBt.addEventListener('click', ()=>{
+myStartBt.addEventListener('click', () => {
   myStartBt.disabled = true;
   startRecordingAllMics();
   listAndShowCams();
 
-startScreenShare();
+  startScreenShare();
 
 })
 

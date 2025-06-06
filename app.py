@@ -5,6 +5,8 @@ import audioop
 import random
 from dotenv import load_dotenv
 import os
+import httplib2
+
 #hola
 # Sobrescribe el contexto HTTPS por defecto para que use el .pem de certifi
 def _create_https_context():
@@ -26,9 +28,30 @@ import base64
 import requests
 from tempfile import NamedTemporaryFile
 
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
+from google_auth_httplib2 import AuthorizedHttp     
+from google.oauth2 import service_account
 
 from openai import OpenAI
 client = OpenAI(api_key=os.getenv("WHISPER_KEY"))  
+
+# Configuración desde .env
+SCOPES = ['https://www.googleapis.com/auth/drive.file']
+SERVICE_ACCOUNT_FILE = os.getenv('GOOGLE_CREDENTIALS_FILE', './credenciales.json')
+FOLDER_ID = os.getenv('GOOGLE_DRIVE_FOLDER_ID')
+
+def _sa_info_from_env() -> dict:
+    """Construye el dict con los campos esenciales de la service account."""
+    return {
+        "type":         os.environ["SA_TYPE"],
+        "project_id":   os.environ["SA_PROJECT_ID"],
+        "private_key_id": os.environ["SA_PRIVATE_KEY_ID"],
+        # Convierte '\n' literales a saltos reales
+        "private_key":  os.environ["SA_PRIVATE_KEY"].replace("\\n", "\n"),
+        "client_email": os.environ["SA_CLIENT_EMAIL"],
+        "token_uri":    os.environ["SA_TOKEN_URI"],
+    }
 
 
 #import soundfile as sf
@@ -80,6 +103,210 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'tu_clave_secreta'  # Cambia esto en producción!
 
 
+# -------------------------AQUI ES LA PARTE PARA SUBIR A GOOGLE DRIVE----
+
+def get_drive_service():
+    """
+    Crea un servicio de Google Drive usando la service-account de variables
+    de entorno y DESACTIVANDO la verificación del certificado SSL.
+    ⚠️  Úsalo solo en entorno de pruebas: deja la conexión vulnerable a MITM.
+    """
+    print("\n===== Intentando crear servicio con variables de entorno =====")
+    try:
+        # 1) Reconstruir el dict de la service-account
+        print("Reconstruyendo credenciales desde variables...")
+        info = _sa_info_from_env()
+
+        # 2) Objeto Credentials
+        credentials = service_account.Credentials.from_service_account_info(
+            info, scopes=SCOPES
+        )
+        print("✔️  Credenciales cargadas.")
+
+        # 3) Cliente HTTP con verificación TLS deshabilitada
+        raw_http = httplib2.Http(
+            disable_ssl_certificate_validation=True,  # 👈 desactiva verificación
+            timeout=60,
+            cache=None
+        )
+        authed_http = AuthorizedHttp(credentials, http=raw_http)
+        print("HTTP autorizado (verificación TLS desactivada).")
+
+        # 4) Construir el servicio Drive
+        service = build(
+            "drive", "v3",
+            http=authed_http,
+            cache_discovery=False
+        )
+        print("✅ Servicio de Drive creado exitosamente")
+        return service
+
+    except Exception as e:
+        print(f"❌ Error al crear servicio de Drive: {e}")
+        traceback.print_exc()
+        return None
+
+
+def upload_single_file_to_drive(file_content, filename, folder_id=None):
+    """
+    Subir un solo archivo a Google Drive
+    """
+    print(f"\n--- Iniciando subida de archivo: {filename} ---")
+    print(f"Tamaño del contenido: {len(file_content)} bytes")
+    print(f"Folder destino: {folder_id or 'Raíz de Drive'}")
+    
+    try:
+        service = get_drive_service()
+        if not service:
+            print("⚠️ Abortando subida por falta de servicio")
+            return {'success': False, 'error': 'No se pudo conectar con Google Drive'}
+        
+        # Crear el archivo en memoria
+        file_stream = io.BytesIO(file_content.encode('utf-8'))
+        
+        # Metadatos del archivo
+        file_metadata = {'name': filename, 'mimeType': 'text/plain'}
+        if folder_id:
+            file_metadata['parents'] = [folder_id]
+        
+        # Subir el archivo
+        print(f"Subiendo '{filename}'...")
+        media = MediaIoBaseUpload(file_stream, mimetype='text/plain', resumable=True)
+        file = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id,name,webViewLink,size'
+        ).execute()
+        
+        print(f"✅ Archivo subido exitosamente! ID: {file.get('id')}")
+        print(f"Enlace: {file.get('webViewLink')}")
+        print(f"Tamaño: {file.get('size', 'N/A')} bytes")
+        
+        return {
+            'success': True,
+            'file_id': file.get('id'),
+            'file_name': file.get('name'),
+            'web_link': file.get('webViewLink'),
+            'size': file.get('size', 'N/A')
+        }
+        
+    except Exception as e:
+        print(f"❌ Error durante la subida de '{filename}': {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+@app.route('/upload-multiple-files', methods=['POST'])
+def upload_multiple_files():
+    """
+    Endpoint para subir múltiples archivos a Google Drive
+    """
+    print("\n" + "="*50)
+    print("📬 RECIBIDA SOLICITUD DE SUBIDA MULTIPLE")
+    print("="*50)
+    
+    try:
+        data = request.get_json()
+        print(f"Datos recibidos: {data.keys() if data else 'Sin datos'}")
+        
+        # Validar estructura básica
+        if not data or 'files' not in data:
+            print("❌ Formato inválido: Falta campo 'files'")
+            return jsonify({
+                'success': False,
+                'error': 'Formato inválido. Se requiere un objeto con array "files"'
+            }), 400
+        
+        files_data = data.get('files', [])
+        folder_id = data.get('folder_id', FOLDER_ID)
+        
+        print(f"Total de archivos recibidos: {len(files_data)}")
+        print(f"Folder ID a usar: {folder_id}")
+        
+        if not files_data:
+            print("❌ No se enviaron archivos en el array")
+            return jsonify({
+                'success': False,
+                'error': 'No se proporcionaron archivos'
+            }), 400
+        
+        if len(files_data) > 10:
+            print(f"❌ Demasiados archivos ({len(files_data)} > 10 permitidos)")
+            return jsonify({
+                'success': False,
+                'error': 'Máximo 10 archivos por request'
+            }), 400
+        
+        # Procesar cada archivo
+        results = []
+        successful_uploads = 0
+        failed_uploads = 0
+        
+        print("\nIniciando procesamiento de archivos...")
+        for idx, file_data in enumerate(files_data):
+            filename = file_data.get('filename', f'archivo_{idx+1}.txt')
+            content = file_data.get('content', '')
+            
+            print(f"\n📄 Procesando archivo {idx+1}/{len(files_data)}: {filename}")
+            
+            if not content:
+                error_msg = "Contenido vacío"
+                print(f"⚠️ {error_msg}")
+                results.append({'filename': filename, 'success': False, 'error': error_msg})
+                failed_uploads += 1
+                continue
+            
+            result = upload_single_file_to_drive(content, filename, folder_id)
+            
+            if result['success']:
+                print(f"👍 {filename} - SUBIDA EXITOSA")
+                results.append({
+                    'filename': filename,
+                    'success': True,
+                    'file_id': result['file_id'],
+                    'web_link': result['web_link'],
+                    'size': result['size']
+                })
+                successful_uploads += 1
+            else:
+                print(f"👎 {filename} - FALLÓ: {result['error']}")
+                results.append({
+                    'filename': filename,
+                    'success': False,
+                    'error': result['error']
+                })
+                failed_uploads += 1
+        
+        # Resumen final
+        print("\n" + "="*50)
+        print("📊 RESUMEN FINAL DE SUBIDA")
+        print(f"TOTAL ARCHIVOS: {len(files_data)}")
+        print(f"EXITOSOS: {successful_uploads}")
+        print(f"FALLIDOS: {failed_uploads}")
+        print("="*50)
+        
+        return jsonify({
+            'success': successful_uploads > 0,
+            'summary': {
+                'total_files': len(files_data),
+                'successful': successful_uploads,
+                'failed': failed_uploads
+            },
+            'results': results,
+            'folder_link': f"https://drive.google.com/drive/folders/{folder_id}" if folder_id else None
+        })
+        
+    except Exception as e:
+        print(f"\n🔥 ERROR INESPERADO EN ENDPOINT: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'Error interno del servidor: {str(e)}'
+        }), 500
+
+# -------------------------------------------------------------------------------
 
 # justo debajo de `socketio = SocketIO(...)`
 log_buffer = []
