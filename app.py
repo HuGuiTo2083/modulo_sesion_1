@@ -250,12 +250,12 @@ def upload_multiple_files():
             
             print(f"\n📄 Procesando archivo {idx+1}/{len(files_data)}: {filename}")
             
-            if not content:
-                error_msg = "Contenido vacío"
-                print(f"⚠️ {error_msg}")
-                results.append({'filename': filename, 'success': False, 'error': error_msg})
-                failed_uploads += 1
-                continue
+            # if not content:
+            #     error_msg = "Contenido vacío"
+            #     print(f"⚠️ {error_msg}")
+            #     results.append({'filename': filename, 'success': False, 'error': error_msg})
+            #     failed_uploads += 1
+            #     continue
             
             result = upload_single_file_to_drive(content, filename, folder_id)
             
