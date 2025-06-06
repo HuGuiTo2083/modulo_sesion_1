@@ -518,18 +518,18 @@ async function listAndShowCams() {
       const camBox = document.createElement('div');
       camBox.classList.add('camBox');
 
-      const title = document.createElement('h3');
-      title.textContent = `Cámara ${i + 1}: ${device.label || 'Sin nombre'}`;
-      title.className = 'ff2 fw300 bsBorderBox p20'
-      camBox.appendChild(title);
+       const title = document.createElement('label');
+       title.textContent = `Cámara ${i + 1}: ${device.label || 'Sin nombre'}`;
+       title.className = 'ff2 fs1 fw300 bsBorderBox p20'
+       camBox.appendChild(title);
 
 
       const video = document.createElement('video');
       video.id = `myCamera${i + 1}`
       video.autoplay = true;
       video.playsInline = true;
-      video.width = 320;
-      video.height = 240;
+      video.width = 190;
+      video.height = 110;
       video.srcObject = stream;
       camBox.appendChild(video);
       console.log('hola')
@@ -537,8 +537,8 @@ async function listAndShowCams() {
 
       // Crear canvas para capturar frames
       const canvas = document.createElement('canvas');
-      canvas.width = 320;
-      canvas.height = 240;
+      canvas.width = 190;
+      canvas.height = 110;
       // No lo añadimos al DOM porque es solo para captura
 
       activeCams.push({ video, canvas, deviceId: device.deviceId });

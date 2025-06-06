@@ -5,6 +5,24 @@
     --fourth: #b3c6cf;
 }
 
+canvas, .camBox, .camBox h4{
+    background-color: var(--second);
+    color: var(--third);
+    text-align: center;
+
+}
+
+.bcThirdLight{
+    background-color: #f7be4d;;
+}
+
+.camBox{
+    display: flex;
+    justify-content: start;
+    align-items: center;
+    flex-direction: column;
+
+}
 
 @font-face {
     font-family: Monserrat;
