@@ -23,9 +23,26 @@
             <!--------------------------------Botones----- -->
 
            <div class="w100 h100  dFlex aiCenter jcCenter gap20">
-             <button class="cPointer w20 h10vh bcThird bNone br10px ff2 fs4 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="startAll">Empezar</button>
-    
-             <button class="cPointer w25 h10vh bcThird bNone br10px ff2 fs3 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="downloadAll">Descargar Registros de Eventos</button>
+            
+            <!-- ----boton de empezar -->
+             <button class="cPointer w5 h10vh bcThird bNone br10px ff2 fs4 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="startAll">
+                <img src="../icons/start.png" class="myImg3"></button>
+              <!-- ----boton de cambiar pestaña -->
+              <button class="cPointer trans0-5 bcThird bNone br10px w5 h10vh dFlex aiCenter jcCenter hoverLight" id="btChangeWindow">
+                <img src="../icons/change_window.png" class="myImg3">
+              </button>
+             <!-- ----boton de pausar -->
+              <button class="cPointer trans0-5 bcThird bNone br10px w5 h10vh dFlex aiCenter jcCenter hoverLight">
+                <img src="../icons/pause.png" class="myImg3">
+              </button>
+                 <!-- ----boton de reanudar -->
+                 <button class="cPointer trans0-5 bcThird bNone br10px w5 h10vh dFlex aiCenter jcCenter hoverLight">
+                    <img src="../icons/reanude.png" class="myImg3">
+                  </button>
+             <!-- ----boton de parar -->
+             <button class="cPointer w5 h10vh bcThird bNone br10px ff2 fs3 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="downloadAll">
+                <img src="../icons/stop.png" class="myImg3">
+            </button>
                 <!-- ----parte para video -->
              <div class="w10 h100  dFlex jcCenter aiCenter pRelative">
                 <button class="cPointer w100 h10vh bcThird bNone br10px ff2 fs3 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="btVideo">Video ▼</button>
@@ -39,7 +56,7 @@
                 <!-- ---------------------- -->
              </div>
              <!-- -------------parte para audio ------------- -->
-                <div class="w10 h100  dFlex jcCenter aiCenter pRelative">
+             <div class="w10 h100  dFlex jcCenter aiCenter pRelative">
                 <button class="cPointer w100 h10vh bcThird bNone br10px ff2 fs3 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="btAudio">Audio ▼</button>
                 <!-- ------ desplegable de audio ------- -->
                 <div class="zIndex2 pAbsolute left0 top10vh w20vw min_h10vh hAuto  bcThird mt20 dNone br10px   aiCenter aiCenter fdColumn bsBorderBox p10 gap20" id="divAudio">
@@ -50,6 +67,7 @@
                 
                 <!-- ---------------------- -->
              </div>
+
          </div>
             <!----------------------------------- -->
 

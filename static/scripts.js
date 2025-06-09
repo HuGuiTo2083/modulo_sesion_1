@@ -112,341 +112,169 @@ async function downloadFile(url, filename) {
 
 let myBoolean = true
 
-let audioCtx, masterStream;
+let  masterStream;
 let fullRecorder, chunkRecorder, partialRecorder, partialRecorder2, partialRecorder3;
 let chunkTimer;
 let mainTranscription
 
+// refs globales
+let audioCtx      = null;
+const micNodes    = [];   // ⬅️ aquí guardaremos un nodo por mic
+
 // 1) Arranca ambos recorders
-
 async function startRecordingAllMics() {
-
-
-
   try {
-    // 1) Pide permiso global y luego lo libera
+    /* 1) Permiso global y liberación inmediata */
     const temp = await navigator.mediaDevices.getUserMedia({ audio: true });
     temp.getTracks().forEach(t => t.stop());
 
-    // 2) Lista todos los micrófonos disponibles
+    /* 2) Enumerar micrófonos */
     const devices = await navigator.mediaDevices.enumerateDevices();
-    const mics = devices.filter(d => d.kind === "audioinput");
+    const mics    = devices.filter(d => d.kind === "audioinput");
 
-    // // 3) Abre cada micrófono y recoge su pista en un array
-    // const tracks = await Promise.all(
-    //   mics.map(async (mic, index) => {
-    //     //---------------LOGICA PARA AGREGAR MICROFONOS AL SELECT
-    //     const option = document.createElement('div');
-    //     option.className = 'cPointer br10px w95 h50px bcSecond fShrink0 dFlex jcCenter aiCenter cThird ff2 fw500 fs1 select taCenter'
-    //     option.setAttribute('data-value', index + 1)
-    //     option.id = `myAudio${index + 1}`
+    console.log(`🎤 Detectados ${mics.length} micrófonos`);
 
-    //     // Mostrar nombre del micrófono si está disponible
-    //     if (mic.label) {
-    //       option.innerHTML = `${mic.label} (Mic ${index + 1})`;
-    //     } else {
-    //       option.innerHTML = `Micrófono ${index + 1} (ID: ${mic.deviceId.slice(0, 10)}...)`;
-    //     }
-    //     option.addEventListener('click', () => { option.classList.toggle('select') })
+    /* 3) Capturar pistas y crear <div> por mic */
+    const tracks   = [];           // pistas MediaStreamTrack
+    const micNodes = [];           // { src, gain } para cada mic
 
-    //     const myDivAudio = document.getElementById('divAudio')
-    //     myDivAudio.appendChild(option)
-    //     //---------
-    //     const stream = await navigator.mediaDevices.getUserMedia({
-    //       audio: { deviceId: { exact: mic.deviceId } }
-    //     });
-    //     return stream.getAudioTracks()[0];
-    //   })
-    // );
+    /* 4) AudioContext y nodos de mezcla */
+    const audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+    const mixGain   = audioCtx.createGain();
+    const dest      = audioCtx.createMediaStreamDestination(); // por si lo necesitas
+    mixGain.connect(dest);          // salida combinada
 
+    /* 5) Procesar micrófono por micrófono */
+    for (let i = 0; i < mics.length; i++) {
+      const mic   = mics[i];
+      const index = i + 1;
 
-    // 3) Abre cada micrófono y recoge su pista en un array
-    console.log(`🎤 Iniciando procesamiento de ${mics.length} micrófonos encontrados`);
+      /* -- Crear DIV de selección -- */
+      const option = document.createElement('div');
+      option.className = 'cPointer br10px w95 h50px bcSecond fShrink0 dFlex jcCenter aiCenter cThird ff2 fw500 fs1 select taCenter';
+      option.id        = `myAudio${index}`;
+      option.innerHTML = mic.label
+        ? `${mic.label} (Mic ${index})`
+        : `Micrófono ${index} (ID: ${mic.deviceId.slice(0, 10)}...)`;
 
-    const tracks = await Promise.all(
-      mics.map(async (mic, index) => {
-        console.log(`\n--- Procesando Micrófono ${index + 1} ---`);
-        console.log(`ID del dispositivo: ${mic.deviceId}`);
-        console.log(`Etiqueta: ${mic.label || 'Sin etiqueta'}`);
-        console.log(`Tipo: ${mic.kind}`);
+      const divAudio = document.getElementById('divAudio');
+      divAudio?.appendChild(option);
 
-        //---------------LOGICA PARA AGREGAR MICROFONOS AL SELECT
-        const option = document.createElement('div');
-        option.className = 'cPointer br10px w95 h50px bcSecond fShrink0 dFlex jcCenter aiCenter cThird ff2 fw500 fs1 select taCenter'
-        option.setAttribute('data-value', index + 1)
-        option.id = `myAudio${index + 1}`
-
-        // Mostrar nombre del micrófono si está disponible
-        if (mic.label) {
-          option.innerHTML = `${mic.label} (Mic ${index + 1})`;
-          console.log(`✅ Elemento creado con etiqueta: ${mic.label}`);
-        } else {
-          option.innerHTML = `Micrófono ${index + 1} (ID: ${mic.deviceId.slice(0, 10)}...)`;
-          console.log(`⚠️ Elemento creado sin etiqueta, usando ID: ${mic.deviceId.slice(0, 10)}`);
-        }
-
-        option.addEventListener('click', () => {
-          option.classList.toggle('select');
-          console.log(`🖱️ Click en micrófono ${index + 1}, estado select:`, option.classList.contains('select'));
+      /* -- Capturar stream del micrófono -- */
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { deviceId: { exact: mic.deviceId } }
         });
+      } catch (e) {
+        console.error(`❌ No se pudo abrir el mic ${index}:`, e);
+        option.style.opacity = '0.5';
+        option.style.backgroundColor = '#ffcccc';
+        option.innerHTML += ' ❌ (Error)';
+        continue;                    // pasa al siguiente mic
+      }
 
-        const myDivAudio = document.getElementById('divAudio');
-        if (myDivAudio) {
-          myDivAudio.appendChild(option);
-          console.log(`📋 Elemento agregado al DOM para micrófono ${index + 1}`);
-        } else {
-          console.error(`❌ No se encontró el elemento 'divAudio' en el DOM`);
-        }
+      const track     = stream.getAudioTracks()[0];
+      tracks.push(track);
 
-        //---------
+      /* -- Fuente y ganancia individuales -- */
+      const src  = audioCtx.createMediaStreamSource(new MediaStream([track]));
+      const gain = audioCtx.createGain();
+      gain.gain.value = 1;           // activo por defecto
 
-        try {
-          console.log(`🔄 Intentando acceder al micrófono ${index + 1}...`);
+      src.connect(gain);
+      gain.connect(mixGain);
 
-          const stream = await navigator.mediaDevices.getUserMedia({
-            audio: { deviceId: { exact: mic.deviceId } }
-          });
+      micNodes[i] = { src, gain };
 
-          console.log(`✅ Stream obtenido para micrófono ${index + 1}`);
-          console.log(`   Estado del stream:`, stream.active ? 'Activo' : 'Inactivo');
-          console.log(`   ID del stream:`, stream.id);
-
-          const audioTracks = stream.getAudioTracks();
-          console.log(`   Número de pistas de audio: ${audioTracks.length}`);
-
-          if (audioTracks.length > 0) {
-            const track = audioTracks[0];
-            console.log(`   Pista principal:`, {
-              id: track.id,
-              label: track.label,
-              readyState: track.readyState,
-              enabled: track.enabled,
-              muted: track.muted
-            });
-
-            // Obtener configuración detallada de la pista
-            const settings = track.getSettings();
-            console.log(`   Configuración de la pista:`, settings);
-
-            // Verificar capacidades
-            const capabilities = track.getCapabilities();
-            console.log(`   Capacidades del micrófono:`, capabilities);
-
-            // Verificar actividad de audio rápidamente
-            try {
-              const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-              const source = audioCtx.createMediaStreamSource(stream);
-              const analyser = audioCtx.createAnalyser();
-              analyser.fftSize = 256;
-              source.connect(analyser);
-
-              const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-              // Verificar por 500ms si hay actividad
-              let hasActivity = false;
-              const startTime = Date.now();
-
-              const checkActivity = () => {
-                analyser.getByteFrequencyData(dataArray);
-                const maxLevel = Math.max(...dataArray);
-                if (maxLevel > 5) {
-                  hasActivity = true;
-                }
-              };
-
-              const activityInterval = setInterval(() => {
-                checkActivity();
-                if (Date.now() - startTime > 500) {
-                  clearInterval(activityInterval);
-                  console.log(`   🎵 Actividad de audio detectada: ${hasActivity ? 'SÍ' : 'NO'}`);
-                  audioCtx.close();
-                }
-              }, 50);
-
-            } catch (activityError) {
-              console.log(`   ⚠️ No se pudo verificar actividad de audio:`, activityError.message);
-            }
-
-            return track;
-          } else {
-            console.warn(`⚠️ El stream del micrófono ${index + 1} no tiene pistas de audio`);
-            return null;
-          }
-
-        } catch (error) {
-          console.error(`❌ Error accediendo al micrófono ${index + 1}:`, error.message);
-          console.error(`   Tipo de error:`, error.name);
-          console.error(`   Detalles:`, error);
-
-          // Marcar visualmente el elemento como problemático
-          option.style.opacity = '0.5';
-          option.style.backgroundColor = '#ffcccc';
-          option.innerHTML += ' ❌ (Error)';
-
-          return null;
-        }
-      })
-    );
-
-    // Filtrar pistas válidas
-    const validTracks = tracks.filter(track => track !== null);
-    console.log(`\n📊 RESUMEN FINAL:`);
-    console.log(`   Total de micrófonos detectados: ${mics.length}`);
-    console.log(`   Micrófonos con acceso exitoso: ${validTracks.length}`);
-    console.log(`   Micrófonos con errores: ${mics.length - validTracks.length}`);
-
-    if (validTracks.length === 0) {
-      console.error(`❌ ¡PROBLEMA CRÍTICO! No se pudo acceder a ningún micrófono`);
-      throw new Error('No se pudo acceder a ningún micrófono');
-    } else if (validTracks.length < mics.length) {
-      console.warn(`⚠️ Solo ${validTracks.length} de ${mics.length} micrófonos están funcionando correctamente`);
-    } else {
-      console.log(`✅ Todos los micrófonos están funcionando correctamente`);
+      /* -- Listener para mutear/activar -- */
+      option.addEventListener('click', () => {
+        const g = micNodes[i].gain;
+        const active = g.gain.value === 1;
+        g.gain.value = active ? 0 : 1;           // toggle
+        option.classList.toggle('inactive', active);
+        console.log(`Mic ${index} ${active ? 'silenciado' : 'activado'}`);
+      });
     }
 
-    // Continuar con las pistas válidas
-    console.log(`🔄 Continuando con ${validTracks.length} pistas de audio válidas`);
+    if (tracks.length === 0) {
+      throw new Error('No se abrió ningún micrófono');
+    }
 
-    // 4) Construye un MediaStream "maestro" con todas las pistas
-    masterStream = new MediaStream(tracks);
-
-    // 5) Crea un AudioContext
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-    // 6) Creamos un nodo de ganancia que va a mezclar todas las señales
-    const mixGain = audioCtx.createGain();
-    const destination = audioCtx.createMediaStreamDestination();
-
-    // 7) Para cada pista, crea su fuente y conéctala al mixGain
-    tracks.forEach(track => {
-      const src = audioCtx.createMediaStreamSource(new MediaStream([track]));
-      src.connect(mixGain);
-    });
-
-    // 8) Conecta mixGain → destination para obtener destination.stream
-    mixGain.connect(destination);
-
-    // 9) Ahora **graba** desde mixGain, no desde destination
-    fullRecorder = new Recorder(mixGain, { numChannels: 1 }); // Para el archivo completo
-    partialRecorder = new Recorder(mixGain, { numChannels: 1 }); // Para el segundo segmento (de 2:01 a 4:00)
-    partialRecorder2 = new Recorder(mixGain, { numChannels: 1 });
-    partialRecorder3 = new Recorder(mixGain, { numChannels: 1 });
+    /* 6) Recorders escuchando mixGain */
+    const fullRecorder     = new Recorder(mixGain, { numChannels: 1 });
+    let   partialRecorder  = new Recorder(mixGain, { numChannels: 1 });
+    let   partialRecorder2 = new Recorder(mixGain, { numChannels: 1 });
+    let   partialRecorder3 = new Recorder(mixGain, { numChannels: 1 });
 
     fullRecorder.record();
     partialRecorder.record();
     partialRecorder3.record();
 
-    // 10) Cada 10 segundos corta el chunk y lo envía
-    chunkTimer = setInterval(() => {
-      //huhm
-      if (myBoolean) {
-        console.log('Entró')
-        partialRecorder2.stop();
-        partialRecorder2.exportWAV(async (blob) => {
-          const form = new FormData();
-          form.append("audio", blob, `chunk-${Date.now()}.wav`);
+    /* 7) Envío de chunks cada 10 s */
+    const chunkTimer = setInterval(() => {
+      if (!myBoolean) return;
 
-          const res = await fetch("/process_audio", {
-            method: "POST",
-            body: form
-          });
-          const json = await res.json();
-          console.log("Chunk analysis:", json);
+      partialRecorder2.stop();
+      partialRecorder2.exportWAV(async blob => {
+        const form = new FormData();
+        form.append('audio', blob, `chunk-${Date.now()}.wav`);
 
-          // Reiniciamos para el siguiente fragmento
-          partialRecorder2.clear();
-          partialRecorder2.record();
-        });
-      }
+        const res  = await fetch('/process_audio', { method: 'POST', body: form });
+        const json = await res.json();
+        console.log('Chunk analysis:', json);
 
+        partialRecorder2.clear();
+        partialRecorder2.record();
+      });
     }, 10_000);
 
-    // 11) Transcripción a los 2 minutos (después de enviar el primer fragmento)
-    setInterval(async () => {
-      //huhm
-      if (myBoolean) {
-        // Detenemos la grabación después de 2 minutos
-        console.log("se entroooo---------------")
-        partialRecorder.stop();
+    /* 8) Transcripción cada 3 min */
+    setInterval(() => {
+      if (!myBoolean) return;
 
-        // Enviar el primer segmento (0-2 minutos) para transcripción
-        partialRecorder.exportWAV(async (blob) => {
-          const form = new FormData();
-          form.append("audio", blob, `full-audio-0-2-${Date.now()}.wav`);
-          const res = await fetch("/transcribe", {
-            method: "POST",
-            body: form
-          });
-          const { transcription } = await res.json();
-          console.log('Transcripción recibida:', transcription);
-          const now = new Date();
-          // Opción A: hora local, formato HH:MM:SS
-          const timeStr = now.toLocaleTimeString();
-          mainTranscription += `------ ${timeStr} ------\n${transcription}\n\n`;
-          // Reiniciar la grabación para la segunda parte (2:01-4:00)
+      partialRecorder.stop();
+      partialRecorder.exportWAV(async blob => {
+        const form = new FormData();
+        form.append('audio', blob, `full-audio-0-2-${Date.now()}.wav`);
 
+        const res = await fetch('/transcribe', { method: 'POST', body: form });
+        const { transcription } = await res.json();
+        console.log('Transcripción:', transcription);
 
+        partialRecorder.clear();
+        partialRecorder = new Recorder(mixGain, { numChannels: 1 });
+        partialRecorder.record();
+      });
+    }, 3 * 60 * 1000);
 
+    /* 9) Resumen importante cada 1 min */
+    setInterval(() => {
+      if (!myBoolean) return;
 
-          partialRecorder.clear();
+      partialRecorder3.stop();
+      partialRecorder3.exportWAV(async blob => {
+        const form = new FormData();
+        form.append('audio', blob, `full-audio-0-2-${Date.now()}.wav`);
+        form.append('status', 1);
 
-          // Crear una nueva instancia del recorder para la segunda parte
-          partialRecorder = new Recorder(mixGain, { numChannels: 1 });  // Crear un nuevo recorder
-          partialRecorder.record();
-        });
-      }
+        const res = await fetch('/resume', { method: 'POST', body: form });
+        const { transcription } = await res.json();
+        console.log('Resumen importante:', transcription);
 
-    }, 3 * 60 * 1000); // 2 minutos
+        partialRecorder3.clear();
+        partialRecorder3 = new Recorder(mixGain, { numChannels: 1 });
+        partialRecorder3.record();
+      });
+    }, 60_000);
 
-
-    // 12) Transcripción a los 1 minutos (después de enviar el primer fragmento)
-    setInterval(async () => {
-      //huhm
-      if (myBoolean) {
-        // Detenemos la grabación después de 2 minutos
-        console.log("se entroooo a la primer llamada de resumen importate---------------")
-        partialRecorder3.stop();
-
-        // Enviar el primer segmento (0-2 minutos) para transcripción
-        partialRecorder3.exportWAV(async (blob) => {
-          const form = new FormData();
-          form.append("audio", blob, `full-audio-0-2-${Date.now()}.wav`);
-          form.append("status", 1);
-          const res = await fetch("/resume", {
-            method: "POST",
-            body: form // Solo enviar el FormData
-          });
-          const { transcription } = await res.json();
-          console.log('Resumen Importante Recibido - transcripcion:', transcription);
-          const now = new Date();
-          // Opción A: hora local, formato HH:MM:SS
-          // const timeStr = now.toLocaleTimeString(); 
-          // mainTranscription += `------ ${timeStr} ------\n${transcription}\n\n`;
-          // Reiniciar la grabación para la segunda parte (2:01-4:00)
-
-
-
-
-          partialRecorder3.clear();
-
-          // Crear una nueva instancia del recorder para la segunda parte
-          partialRecorder3 = new Recorder(mixGain, { numChannels: 1 });  // Crear un nuevo recorder
-          partialRecorder3.record();
-        });
-      }
-
-    }, 1 * 60 * 1000); // 1 minutos
-
-
-
-    // 12) Habilita el botón para detener y descargar
-    document.getElementById("downloadAll").disabled = false;
+    /* 10) Habilitar descarga */
+    document.getElementById('downloadAll').disabled = false;
 
   } catch (err) {
-    console.error("Error arrancando grabación de micrófonos:", err);
+    console.error('Error arrancando grabación de micrófonos:', err);
   }
 }
-
 
 // -------------------------------------------------
 
@@ -743,22 +571,46 @@ async function downloadInformeContextual() {
 // ------------------------ L O G I C A     P A R A    G R A B A R     P A N T A L L A --------------
 
 let currentFrame = null;
+// 1) Variables de módulo para no perder la referencia
+let currentStream     = null;   // MediaStream activo
+let captureTimer1     = null;   // interval IDs
+let captureTimer2     = null;
+const video = document.getElementById('myDivScreen');
+
+
+// 3) Función para detener TODO lo anterior
+function stopScreenShare () {
+  if (currentStream) {
+    currentStream.getTracks().forEach(t => t.stop());  // libera cámara
+    currentStream = null;
+  }
+  clearInterval(captureTimer1);
+  clearInterval(captureTimer2);
+  video.srcObject = null;  
+}
+const myBtChangeWindow = document.getElementById('btChangeWindow')
+
 
 async function startScreenShare() {
   try {
+    // Detén la sesión y temporizadores previos
+    stopScreenShare();
     // Solicitar permiso y capturar la pantalla
-    const stream = await navigator.mediaDevices.getDisplayMedia({
+     currentStream  = await navigator.mediaDevices.getDisplayMedia({
       video: { cursor: "always" },
       audio: false
     });
 
-    const video = document.getElementById('myDivScreen');
-    video.srcObject = stream;
-
+    video.srcObject = currentStream;
+    myBtChangeWindow.addEventListener('click', ()=>{
+      console.log('holis')
+      // stopScreenShare(stream)
+      startScreenShare()
+    })
     // Crear un canvas para capturar frames
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-
+    
     video.addEventListener('loadedmetadata', () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -856,9 +708,9 @@ async function startScreenShare() {
 
     // Ejecutar cada 5 segundos
     //huhm
-    setInterval(captureAndSendFrame, 10 * 1000);
-    //new-huhm
-    setInterval(captureAndSendFrame2, 1.5 * 60 * 1000);
+    // Vuelve a arrancar los intervalos UNA sola vez
+    captureTimer1 = setInterval(captureAndSendFrame,   10 * 1000);
+    captureTimer2 = setInterval(captureAndSendFrame2,  1.5 * 60 * 1000);
 
 
   } catch (err) {

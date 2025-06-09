@@ -70,4 +70,59 @@ canvas, .camBox, .camBox h4{
 
 
 
+.myImg{
+    width: clamp(200px, 50vw, 500px);
+    /* background-color: #333333; */
+}
+
+.myImg6{
+    width: clamp(300px, 60vw, 600px);
+    /* background-color: #333333; */
+}
+
+.myImg8{
+    width: clamp(130px, 34vw, 250px);
+    height: clamp(100px, 34vw, 250px);
+
+    /* background-color: #333333; */
+}
+
+.myImg7{
+    width: clamp(250px, 55vw, 550px);
+    /* background-color: #333333; */
+}
+
+.myImg2{
+    width: clamp(50px, 10vw, 100px);
+    height: clamp(50px, 10vw, 100px);
+    /* background-color: #333333; */
+}
+
+.myImg4{
+    width: clamp(90px, 10vw, 100px);
+   
+    /* background-color: #333333; */
+}
+
+.myImg9{
+  width: clamp(80px, 15vw, 100px);
+ 
+  /* background-color: #333333; */
+}
+
+.myImg3{
+    width: clamp(30px, 7vw, 60px);
+    height: clamp(30px, 7vw, 60px);
+    /* background-color: #333333; */
+}
+
+.myImg5{
+    width: clamp(40px, 8vw, 60px);
+    height: clamp(40px, 8vw, 60px);
+    /* background-color: #333333; */
+}
+
+
+
+
 
