@@ -26,22 +26,23 @@
             
             <!-- ----boton de empezar -->
              <button class="cPointer w5 h10vh bcThird bNone br10px ff2 fs4 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="startAll">
-                <img src="../icons/start.png" class="myImg3"></button>
+                <img  src="{{ url_for('static', filename='icons/start.png') }}" class="myImg3"></button>
               <!-- ----boton de cambiar pestaña -->
               <button class="cPointer trans0-5 bcThird bNone br10px w5 h10vh dFlex aiCenter jcCenter hoverLight" id="btChangeWindow">
-                <img src="../icons/change_window.png" class="myImg3">
+                <img  src="{{ url_for('static', filename='icons/change_window.png') }}" class="myImg3">
               </button>
              <!-- ----boton de pausar -->
               <button class="cPointer trans0-5 bcThird bNone br10px w5 h10vh dFlex aiCenter jcCenter hoverLight">
-                <img src="../icons/pause.png" class="myImg3">
+                <img  src="{{ url_for('static', filename='icons/pause.png') }}" class="myImg3">
               </button>
                  <!-- ----boton de reanudar -->
                  <button class="cPointer trans0-5 bcThird bNone br10px w5 h10vh dFlex aiCenter jcCenter hoverLight">
-                    <img src="../icons/reanude.png" class="myImg3">
+                    <img  src="{{ url_for('static', filename='icons/reanude.png') }}" class="myImg3">
                   </button>
              <!-- ----boton de parar -->
              <button class="cPointer w5 h10vh bcThird bNone br10px ff2 fs3 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="downloadAll">
-                <img src="../icons/stop.png" class="myImg3">
+                <img src="{{ url_for('static', filename='icons/stop.png') }}"
+                    class="myImg3" alt="Stop">
             </button>
                 <!-- ----parte para video -->
              <div class="w10 h100  dFlex jcCenter aiCenter pRelative">
