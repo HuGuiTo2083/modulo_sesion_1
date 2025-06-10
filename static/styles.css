@@ -12,6 +12,11 @@ canvas, .camBox, .camBox h4{
 
 }
 
+.b2_solid_third{
+    border: 2px solid var(--third);
+  }
+  
+
 .bcThirdLight{
     background-color: #f7be4d;;
 }

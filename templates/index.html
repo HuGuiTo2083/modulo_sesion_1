@@ -28,11 +28,11 @@
              <button class="cPointer w5 h10vh bcThird bNone br10px ff2 fs4 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="startAll">
                 <img  src="{{ url_for('static', filename='icons/start.png') }}" class="myImg3"></button>
               <!-- ----boton de cambiar pestaña -->
-              <button class="cPointer trans0-5 bcThird bNone br10px w5 h10vh dFlex aiCenter jcCenter hoverLight" id="btChangeWindow">
+              <button class="cPointer trans0-5 bcThird bNone br10px w5 h10vh dFlex aiCenter jcCenter hoverLight bcThird2" id="btChangeWindow">
                 <img  src="{{ url_for('static', filename='icons/change_window.png') }}" class="myImg3">
               </button>
              <!-- ----boton de pausar -->
-              <button class="cPointer trans0-5 bcThird bNone br10px w5 h10vh dFlex aiCenter jcCenter hoverLight" id="btPause">
+              <button class="cPointer trans0-5 bcThird bNone br10px w5 h10vh dFlex aiCenter jcCenter hoverLight bcThird2" id="btPause">
                 <img  src="{{ url_for('static', filename='icons/pause.png') }}" class="myImg3">
               </button>
                  <!-- ----boton de reanudar -->
@@ -40,7 +40,7 @@
                     <img  src="{{ url_for('static', filename='icons/reanude.png') }}" class="myImg3">
                   </button>
              <!-- ----boton de parar -->
-             <button class="cPointer w5 h10vh bcThird bNone br10px ff2 fs3 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="downloadAll">
+             <button class="cPointer w5 h10vh bcThird bNone br10px ff2 fs3 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond bcThird2" id="downloadAll">
                 <img src="{{ url_for('static', filename='icons/stop.png') }}"
                     class="myImg3" alt="Stop">
             </button>
@@ -77,18 +77,18 @@
 <!------------------------------------------------------Parte de las camaras----- -->
     <div class="w100 h100  dFlex gap20 bsBorderBox p10 dFlex">
         <!-- Contenedor del stream -->
-        <div class=" hAuto w70 dFlex jcCenter aiCenter bsBorderBox p10 br10px bcSecond ">
+        <div class=" hAuto w70 dFlex jcCenter aiCenter bsBorderBox p10 br10px bcWhite">
             <video id="myDivScreen" autoplay playsinline style="width:100%; height:auto;"></video>
         </div>
         <!-- Contenedor de camaras -->
          <div class="w25 h100 dGrid gtc_1 gtr_1_2 gap20">
-            <div id="cams" class=" w100 bcSecond br10px bsBorderBox  jcCenter aiCenter oHidden bsBorderBox p20">
+            <div id="cams" class=" w100 bcWhite br10px bsBorderBox  jcCenter aiCenter oHidden bsBorderBox p20">
    
     
             </div>
 
-            <div  class=" w100 bcThird br10px bsBorderBox dFlex jcCenter aiCenter pRelative oHidden">
-               <div class="b2_solid_white br10px w95 h45vh oxHidden oyAuto dFlex jcStart aiCenter bsBorderBox pt10 fdColumn gap20" id="divImportant">
+            <div  class=" w100 bcWhite br10px bsBorderBox dFlex jcCenter aiCenter pRelative oHidden">
+               <div class="b2_solid_third br10px w95 h45vh oxHidden oyAuto dFlex jcStart aiCenter bsBorderBox pt10 fdColumn gap20" id="divImportant">
                  <!-- <div class="w90 fShrink0 hAuto taCenter dFlex aiCenter jcCenter bsBorderBox p10 bcThirdLight ff2 fs1 br5px">
                     Prueba Visual                  
                  </div>

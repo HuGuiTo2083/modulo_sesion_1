@@ -144,33 +144,7 @@ async function startRecordingAllMics() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const mics = devices.filter(d => d.kind === "audioinput");
 
-    // // 3) Abre cada micrófono y recoge su pista en un array
-    // const tracks = await Promise.all(
-    //   mics.map(async (mic, index) => {
-    //     //---------------LOGICA PARA AGREGAR MICROFONOS AL SELECT
-    //     const option = document.createElement('div');
-    //     option.className = 'cPointer br10px w95 h50px bcSecond fShrink0 dFlex jcCenter aiCenter cThird ff2 fw500 fs1 select taCenter'
-    //     option.setAttribute('data-value', index + 1)
-    //     option.id = `myAudio${index + 1}`
-
-    //     // Mostrar nombre del micrófono si está disponible
-    //     if (mic.label) {
-    //       option.innerHTML = `${mic.label} (Mic ${index + 1})`;
-    //     } else {
-    //       option.innerHTML = `Micrófono ${index + 1} (ID: ${mic.deviceId.slice(0, 10)}...)`;
-    //     }
-    //     option.addEventListener('click', () => { option.classList.toggle('select') })
-
-    //     const myDivAudio = document.getElementById('divAudio')
-    //     myDivAudio.appendChild(option)
-    //     //---------
-    //     const stream = await navigator.mediaDevices.getUserMedia({
-    //       audio: { deviceId: { exact: mic.deviceId } }
-    //     });
-    //     return stream.getAudioTracks()[0];
-    //   })
-    // );
-
+    
 
     // 3) Abre cada micrófono y recoge su pista en un array
     console.log(`🎤 Iniciando procesamiento de ${mics.length} micrófonos encontrados`);
@@ -333,12 +307,13 @@ async function startRecordingAllMics() {
 
     partialRecorderPause.record();
     btPause.addEventListener('click', ()=>{
+      console.log('se apretó el botón de pausa')
       btReanude.classList.toggle('bcThird2')
       btPause.classList.toggle('bcThird2')
       partialRecorderPause.stop();
       partialRecorderPause.exportWAV(async (blob) => {
         multipleRecorders.push(blob);  // Guardar fragmento grabado en el array
-
+         console.log('se hace push a multiple buffer, su tamaño es de: ' + multipleRecorders.length)
         // Continúa grabando el siguiente segmento
         partialRecorderPause.clear();
  
@@ -346,8 +321,11 @@ async function startRecordingAllMics() {
     })
 
     btReanude.addEventListener('click', ()=>{
+      console.log('se apretó el botón de reanudar')
+
       btReanude.classList.toggle('bcThird2')
       btPause.classList.toggle('bcThird2')
+      partialRecorderPause = new Recorder(mixGain, { numChannels: 1 });
       partialRecorderPause.record();
     })
 
@@ -480,33 +458,33 @@ async function stopAndDownloadFull() {
 
   // Detener la grabación de la pausa
   partialRecorderPause.stop();
+// Detener la grabación de los recorders previos
+fullRecorder.stop();
+partialRecorder.stop();
 
   // Exporta el fragmento grabado y lo guarda en el array
   partialRecorderPause.exportWAV(async (blob) => {
     multipleRecorders.push(blob);  // Guardar fragmento grabado en el array
+    console.log('se hace push a multiple buffer, su tamaño es de: ' + multipleRecorders.length)
 
     // Continúa grabando el siguiente segmento
     partialRecorderPause.clear();
-  });
+    if (multipleRecorders.length > 1) {
+      console.log('se detecto que hay mas de un fragmento de audio')
+      // Unir todos los fragmentos grabados en un solo archivo (Blob)
+      const combinedBlob = new Blob(multipleRecorders, { type: 'audio/wav' });
+      // Limpiar los recorders previos
+      // Para asegurarnos de que fullRecorder grabe desde el audio combinado, reiniciamos el recorder
+      fullRecorder = new Recorder(audioCtx.createMediaStreamSource(new MediaStream([combinedBlob])), { numChannels: 1 });
+  
+      // Iniciar la grabación del nuevo archivo combinado (si es necesario seguir grabando)
+      fullRecorder.record();
+    }
 
-  // Detener la grabación de los recorders previos
-  fullRecorder.stop();
-  partialRecorder.stop();
-
-  if (multipleRecorders.length > 1) {
-    // Unir todos los fragmentos grabados en un solo archivo (Blob)
-    const combinedBlob = new Blob(multipleRecorders, { type: 'audio/wav' });
-
-    // Limpiar los recorders previos
-    // Para asegurarnos de que fullRecorder grabe desde el audio combinado, reiniciamos el recorder
-    fullRecorder = new Recorder(audioCtx.createMediaStreamSource(new MediaStream([combinedBlob])), { numChannels: 1 });
-
-    // Iniciar la grabación del nuevo archivo combinado (si es necesario seguir grabando)
-    fullRecorder.record();
-  }
-
-  // Exportar el archivo WAV completo (audio de 0 a 4 minutos)
+    //-----------------------------------
+    // Exportar el archivo WAV completo (audio de 0 a 4 minutos)
   fullRecorder.exportWAV(async (fullBlob) => {
+    console.log('holassss')
     const timestamp = new Date().toISOString();
     const filename = `session-full-${timestamp}.wav`;
 
@@ -542,6 +520,14 @@ async function stopAndDownloadFull() {
       }
     });
   });
+  //--------------------------------------------
+  });
+
+  
+
+
+
+  
 }
 
 // Función para subir transcripción y audio
@@ -965,7 +951,7 @@ async function listAndShowCams() {
 
       //--------------parte para el menu de camaras:
       const option = document.createElement('div');
-      option.className = 'cPointer br10px w95 h50px bcSecond fShrink0 dFlex jcCenter aiCenter cThird ff2 fw500 fs1 select taCenter'
+      option.className = 'cPointer br10px w95 h50px bcWhite fShrink0 dFlex jcCenter aiCenter cThird ff2 fw500 fs1 select taCenter'
       option.setAttribute('data-value', i + 1)
       option.id = `myVideo${device.deviceId}`
       // Modificamos el event listener
@@ -1149,6 +1135,10 @@ myStartBt.addEventListener('click', () => {
   btReanude.disabled = false
   btChangeWindow.disabled = false
   downloadAll.disabled = false
+  btPause.classList.toggle('bcThird2')
+  myStartBt.classList.toggle('bcThird2')
+  myBtChangeWindow.classList.toggle('bcThird2')
+  downloadAll.classList.toggle('bcThird2')
   startRecordingAllMics();
   listAndShowCams();
 
