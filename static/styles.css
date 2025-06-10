@@ -6,7 +6,7 @@
 }
 
 canvas, .camBox, .camBox h4{
-    background-color: var(--second);
+    background-color: white;
     color: var(--third);
     text-align: center;
 

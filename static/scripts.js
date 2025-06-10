@@ -951,7 +951,7 @@ async function listAndShowCams() {
 
       //--------------parte para el menu de camaras:
       const option = document.createElement('div');
-      option.className = 'cPointer br10px w95 h50px bcWhite fShrink0 dFlex jcCenter aiCenter cThird ff2 fw500 fs1 select taCenter'
+      option.className = 'cPointer br10px w95 h50px bcThird fShrink0 dFlex jcCenter aiCenter cThird ff2 fw500 fs1 select taCenter'
       option.setAttribute('data-value', i + 1)
       option.id = `myVideo${device.deviceId}`
       // Modificamos el event listener
