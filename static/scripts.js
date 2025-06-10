@@ -144,7 +144,7 @@ async function startRecordingAllMics() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const mics = devices.filter(d => d.kind === "audioinput");
 
-    
+
 
     // 3) Abre cada micrófono y recoge su pista en un array
     console.log(`🎤 Iniciando procesamiento de ${mics.length} micrófonos encontrados`);
@@ -274,7 +274,7 @@ async function startRecordingAllMics() {
       })
     );
 
-   
+
 
     // Continuar con las pistas válidas
     // console.log(`🔄 Continuando con ${validTracks.length} pistas de audio válidas`);
@@ -306,21 +306,21 @@ async function startRecordingAllMics() {
     partialRecorderPause = new Recorder(mixGain, { numChannels: 1 });
 
     partialRecorderPause.record();
-    btPause.addEventListener('click', ()=>{
+    btPause.addEventListener('click', () => {
       console.log('se apretó el botón de pausa')
       btReanude.classList.toggle('bcThird2')
       btPause.classList.toggle('bcThird2')
       partialRecorderPause.stop();
       partialRecorderPause.exportWAV(async (blob) => {
         multipleRecorders.push(blob);  // Guardar fragmento grabado en el array
-         console.log('se hace push a multiple buffer, su tamaño es de: ' + multipleRecorders.length)
+        console.log('se hace push a multiple buffer, su tamaño es de: ' + multipleRecorders.length)
         // Continúa grabando el siguiente segmento
         partialRecorderPause.clear();
- 
+
       });
     })
 
-    btReanude.addEventListener('click', ()=>{
+    btReanude.addEventListener('click', () => {
       console.log('se apretó el botón de reanudar')
 
       btReanude.classList.toggle('bcThird2')
@@ -458,9 +458,9 @@ async function stopAndDownloadFull() {
 
   // Detener la grabación de la pausa
   partialRecorderPause.stop();
-// Detener la grabación de los recorders previos
-fullRecorder.stop();
-partialRecorder.stop();
+  // Detener la grabación de los recorders previos
+  fullRecorder.stop();
+  partialRecorder.stop();
 
   // Exporta el fragmento grabado y lo guarda en el array
   partialRecorderPause.exportWAV(async (blob) => {
@@ -473,61 +473,70 @@ partialRecorder.stop();
       console.log('se detecto que hay mas de un fragmento de audio')
       // Unir todos los fragmentos grabados en un solo archivo (Blob)
       const combinedBlob = new Blob(multipleRecorders, { type: 'audio/wav' });
-      // Limpiar los recorders previos
-      // Para asegurarnos de que fullRecorder grabe desde el audio combinado, reiniciamos el recorder
-      fullRecorder = new Recorder(audioCtx.createMediaStreamSource(new MediaStream([combinedBlob])), { numChannels: 1 });
-  
-      // Iniciar la grabación del nuevo archivo combinado (si es necesario seguir grabando)
+      // 1. Crear URL y <audio>
+      const url = URL.createObjectURL(combinedBlob);
+      const audio = new Audio(url);
+      audio.loop = false;              // opcional
+      await audio.play();               // necesita un gesto de usuario previo en la página
+
+      // 2. Capturar el stream de reproducción
+      const combinedStream = audio.captureStream();
+
+      // 3. Usar ese stream como fuente del nuevo Recorder
+      fullRecorder = new Recorder(
+        audioCtx.createMediaStreamSource(combinedStream),
+        { numChannels: 1 }
+      );
       fullRecorder.record();
     }
 
     //-----------------------------------
     // Exportar el archivo WAV completo (audio de 0 a 4 minutos)
-  fullRecorder.exportWAV(async (fullBlob) => {
-    console.log('holassss')
-    const timestamp = new Date().toISOString();
-    const filename = `session-full-${timestamp}.wav`;
+    fullRecorder.exportWAV(async (fullBlob) => {
+      console.log('holassss')
+      const timestamp = new Date().toISOString();
+      const filename = `session-full-${timestamp}.wav`;
 
-    // Exportar la transcripción de la "segunda parte" (2:01 a 4:00)
-    partialRecorder.exportWAV(async (partialBlob) => {
-      const formData = new FormData();
-      formData.append('audio', partialBlob, filename);
+      // Exportar la transcripción de la "segunda parte" (2:01 a 4:00)
+      partialRecorder.exportWAV(async (partialBlob) => {
+        const formData = new FormData();
+        formData.append('audio', partialBlob, filename);
 
-      try {
-        const resp = await fetch('/transcribe', {
-          method: 'POST',
-          body: formData
-        });
+        try {
+          const resp = await fetch('/transcribe', {
+            method: 'POST',
+            body: formData
+          });
 
-        if (!resp.ok) {
-          const errText = await resp.text();
-          throw new Error(`Error ${resp.status}: ${errText}`);
+          if (!resp.ok) {
+            const errText = await resp.text();
+            throw new Error(`Error ${resp.status}: ${errText}`);
+          }
+
+          const { transcription } = await resp.json();
+          console.log('Transcripción recibida:', transcription);
+          const now = new Date();
+          const timeStr = now.toLocaleTimeString();
+          mainTranscription += `------ ${timeStr} ------\n${transcription}\n\n`;
+
+          // Enviar la transcripción y el audio al servidor
+          await uploadTranscriptionAndAudio(mainTranscription, fullBlob, timestamp);
+
+        } catch (err) {
+          console.error('Falló la transcripción:', err);
+          // Si falla la transcripción, subir solo el audio
+          await uploadAudioOnly(fullBlob, timestamp);
         }
-
-        const { transcription } = await resp.json();
-        console.log('Transcripción recibida:', transcription);
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString();
-        mainTranscription += `------ ${timeStr} ------\n${transcription}\n\n`;
-
-        // Enviar la transcripción y el audio al servidor
-        await uploadTranscriptionAndAudio(mainTranscription, fullBlob, timestamp);
-
-      } catch (err) {
-        console.error('Falló la transcripción:', err);
-        // Si falla la transcripción, subir solo el audio
-        await uploadAudioOnly(fullBlob, timestamp);
-      }
+      });
     });
+    //--------------------------------------------
   });
-  //--------------------------------------------
-  });
-
-  
 
 
 
-  
+
+
+
 }
 
 // Función para subir transcripción y audio
@@ -537,7 +546,7 @@ async function uploadTranscriptionAndAudio(transcriptionContent, audioBlob, time
 
     // 1. Subir el archivo de audio (WAV) primero
     const audioUploaded = await uploadAudioFile(audioBlob, timestamp);
-    
+
     if (!audioUploaded) {
       console.warn('⚠️ No se pudo subir el audio, pero continuando con archivos de texto...');
     }
@@ -556,7 +565,7 @@ async function uploadAudioOnly(audioBlob, timestamp) {
   try {
     console.log('📤 Subiendo solo audio (sin transcripción)...');
     const audioUploaded = await uploadAudioFile(audioBlob, timestamp);
-    
+
     if (audioUploaded) {
       console.log('✅ Audio subido exitosamente');
       // Opcional: subir otros archivos del sistema sin transcripción
@@ -574,7 +583,7 @@ async function uploadAudioFile(audioBlob, timestamp) {
     const formData = new FormData();
     formData.append('audio', audioBlob, `session-full-${timestamp}.wav`);
     formData.append('timestamp', timestamp);
-    
+
     const response = await fetch('/upload-audio-file', {
       method: 'POST',
       body: formData
@@ -772,21 +781,21 @@ async function downloadInformeContextual() {
 
 let currentFrame = null;
 // 1) Variables de módulo para no perder la referencia
-let currentStream     = null;   // MediaStream activo
-let captureTimer1     = null;   // interval IDs
-let captureTimer2     = null;
+let currentStream = null;   // MediaStream activo
+let captureTimer1 = null;   // interval IDs
+let captureTimer2 = null;
 const video = document.getElementById('myDivScreen');
 
 
 // 3) Función para detener TODO lo anterior
-function stopScreenShare () {
+function stopScreenShare() {
   if (currentStream) {
     currentStream.getTracks().forEach(t => t.stop());  // libera cámara
     currentStream = null;
   }
   clearInterval(captureTimer1);
   clearInterval(captureTimer2);
-  video.srcObject = null;  
+  video.srcObject = null;
 }
 const myBtChangeWindow = document.getElementById('btChangeWindow')
 
@@ -796,13 +805,13 @@ async function startScreenShare() {
     // Detén la sesión y temporizadores previos
     stopScreenShare();
     // Solicitar permiso y capturar la pantalla
-     currentStream  = await navigator.mediaDevices.getDisplayMedia({
+    currentStream = await navigator.mediaDevices.getDisplayMedia({
       video: { cursor: "always" },
       audio: false
     });
 
     video.srcObject = currentStream;
-    myBtChangeWindow.addEventListener('click', ()=>{
+    myBtChangeWindow.addEventListener('click', () => {
       console.log('holis')
       // stopScreenShare(stream)
       startScreenShare()
@@ -810,7 +819,7 @@ async function startScreenShare() {
     // Crear un canvas para capturar frames
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    
+
     video.addEventListener('loadedmetadata', () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -834,7 +843,7 @@ async function startScreenShare() {
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ image: currentFrame})
+            body: JSON.stringify({ image: currentFrame })
           });
 
           if (!response.ok) {
@@ -909,8 +918,8 @@ async function startScreenShare() {
     // Ejecutar cada 5 segundos
     //huhm
     // Vuelve a arrancar los intervalos UNA sola vez
-    captureTimer1 = setInterval(captureAndSendFrame,   10 * 1000);
-    captureTimer2 = setInterval(captureAndSendFrame2,  1.5 * 60 * 1000);
+    captureTimer1 = setInterval(captureAndSendFrame, 10 * 1000);
+    captureTimer2 = setInterval(captureAndSendFrame2, 1.5 * 60 * 1000);
 
 
   } catch (err) {
@@ -1097,33 +1106,33 @@ async function listAndShowCams() {
           // console.log('***camara activa***')
           //huhm
           try {
-          const response = await fetch('/upload_frame2', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              deviceId,
-              image: frameBase64
-            })
-          });
-          if (!response.ok) {
-            console.error(`Error enviando frame de cámara ${index + 1}`);
-          } else {
-            Opcional: console.log(`Frame cámara ${index + 1} enviado`);
+            const response = await fetch('/upload_frame2', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                deviceId,
+                image: frameBase64
+              })
+            });
+            if (!response.ok) {
+              console.error(`Error enviando frame de cámara ${index + 1}`);
+            } else {
+              Opcional: console.log(`Frame cámara ${index + 1} enviado`);
+            }
+          } catch (error) {
+            console.error(`Error en fetch para cámara ${index + 1}:`, error);
           }
-        } catch (error) {
-          console.error(`Error en fetch para cámara ${index + 1}:`, error);
-        }
 
 
         }
-        
+
 
       }
     });
   }
   //huhm
   // Capturar y enviar cada 10 segundos
-  setInterval(captureAndSendFrames, 1* 60 * 1000);
+  setInterval(captureAndSendFrames, 1 * 60 * 1000);
 }
 
 
