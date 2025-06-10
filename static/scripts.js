@@ -333,6 +333,8 @@ async function startRecordingAllMics() {
 
     partialRecorderPause.record();
     btPause.addEventListener('click', ()=>{
+      btReanude.classList.toggle('bcThird2')
+      btPause.classList.toggle('bcThird2')
       partialRecorderPause.stop();
       partialRecorderPause.exportWAV(async (blob) => {
         multipleRecorders.push(blob);  // Guardar fragmento grabado en el array
@@ -344,6 +346,8 @@ async function startRecordingAllMics() {
     })
 
     btReanude.addEventListener('click', ()=>{
+      btReanude.classList.toggle('bcThird2')
+      btPause.classList.toggle('bcThird2')
       partialRecorderPause.record();
     })
 
