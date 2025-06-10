@@ -3,9 +3,20 @@
 // Función para obtener contenido de un archivo
 // async function getFileContent(url) {
 //   const resp = await fetch(url);
-//   if (!resp.ok) throw new Error(`Error ${resp.status} al obtener ${url}`);
+//   if (!resp.ok) throw new Error(`Erro8r ${resp.status} al obtener ${url}`);
 //   return await resp.text();
 // }
+
+const btReanude = document.getElementById('btReanude')
+const btPause = document.getElementById('btPause')
+const btChangeWindow = document.getElementById('btChangeWindow')
+const downloadAll = document.getElementById('downloadAll')
+
+
+btPause.disabled = true
+btReanude.disabled = true
+btChangeWindow.disabled = true
+downloadAll.disabled = true
 
 
 async function uploadAllFilesAtOnce() {
@@ -116,7 +127,8 @@ let audioCtx, masterStream;
 let fullRecorder, chunkRecorder, partialRecorder, partialRecorder2, partialRecorder3;
 let chunkTimer;
 let mainTranscription
-
+let multipleRecorders = []
+let partialRecorderPause
 // 1) Arranca ambos recorders
 
 async function startRecordingAllMics() {
@@ -288,21 +300,7 @@ async function startRecordingAllMics() {
       })
     );
 
-    // Filtrar pistas válidas
-    const validTracks = tracks.filter(track => track !== null);
-    console.log(`\n📊 RESUMEN FINAL:`);
-    console.log(`   Total de micrófonos detectados: ${mics.length}`);
-    console.log(`   Micrófonos con acceso exitoso: ${validTracks.length}`);
-    console.log(`   Micrófonos con errores: ${mics.length - validTracks.length}`);
-
-    if (validTracks.length === 0) {
-      console.error(`❌ ¡PROBLEMA CRÍTICO! No se pudo acceder a ningún micrófono`);
-      throw new Error('No se pudo acceder a ningún micrófono');
-    } else if (validTracks.length < mics.length) {
-      console.warn(`⚠️ Solo ${validTracks.length} de ${mics.length} micrófonos están funcionando correctamente`);
-    } else {
-      console.log(`✅ Todos los micrófonos están funcionando correctamente`);
-    }
+   
 
     // Continuar con las pistas válidas
     console.log(`🔄 Continuando con ${validTracks.length} pistas de audio válidas`);
@@ -331,6 +329,23 @@ async function startRecordingAllMics() {
     partialRecorder = new Recorder(mixGain, { numChannels: 1 }); // Para el segundo segmento (de 2:01 a 4:00)
     partialRecorder2 = new Recorder(mixGain, { numChannels: 1 });
     partialRecorder3 = new Recorder(mixGain, { numChannels: 1 });
+    partialRecorderPause = new Recorder(mixGain, { numChannels: 1 });
+
+    partialRecorderPause.record();
+    btPause.addEventListener('click', ()=>{
+      partialRecorderPause.stop();
+      partialRecorderPause.exportWAV(async (blob) => {
+        multipleRecorders.push(blob);  // Guardar fragmento grabado en el array
+
+        // Continúa grabando el siguiente segmento
+        partialRecorderPause.clear();
+ 
+      });
+    })
+
+    btReanude.addEventListener('click', ()=>{
+      partialRecorderPause.record();
+    })
 
     fullRecorder.record();
     partialRecorder.record();
@@ -459,16 +474,39 @@ async function startRecordingAllMics() {
 async function stopAndDownloadFull() {
   clearInterval(chunkTimer);
 
-  // Detener la grabación cuando el usuario presiona el botón
+  // Detener la grabación de la pausa
+  partialRecorderPause.stop();
+
+  // Exporta el fragmento grabado y lo guarda en el array
+  partialRecorderPause.exportWAV(async (blob) => {
+    multipleRecorders.push(blob);  // Guardar fragmento grabado en el array
+
+    // Continúa grabando el siguiente segmento
+    partialRecorderPause.clear();
+  });
+
+  // Detener la grabación de los recorders previos
   fullRecorder.stop();
   partialRecorder.stop();
 
-  // Exportar el WAV completo (audio de 0 a 4 minutos)
+  if (multipleRecorders.length > 1) {
+    // Unir todos los fragmentos grabados en un solo archivo (Blob)
+    const combinedBlob = new Blob(multipleRecorders, { type: 'audio/wav' });
+
+    // Limpiar los recorders previos
+    // Para asegurarnos de que fullRecorder grabe desde el audio combinado, reiniciamos el recorder
+    fullRecorder = new Recorder(audioCtx.createMediaStreamSource(new MediaStream([combinedBlob])), { numChannels: 1 });
+
+    // Iniciar la grabación del nuevo archivo combinado (si es necesario seguir grabando)
+    fullRecorder.record();
+  }
+
+  // Exportar el archivo WAV completo (audio de 0 a 4 minutos)
   fullRecorder.exportWAV(async (fullBlob) => {
     const timestamp = new Date().toISOString();
     const filename = `session-full-${timestamp}.wav`;
 
-    // Enviar el audio completo al endpoint /transcribe para la "segunda parte" (2:01 a 4:00)
+    // Exportar la transcripción de la "segunda parte" (2:01 a 4:00)
     partialRecorder.exportWAV(async (partialBlob) => {
       const formData = new FormData();
       formData.append('audio', partialBlob, filename);
@@ -489,13 +527,13 @@ async function stopAndDownloadFull() {
         const now = new Date();
         const timeStr = now.toLocaleTimeString();
         mainTranscription += `------ ${timeStr} ------\n${transcription}\n\n`;
-        
-        // EN LUGAR DE DESCARGAR, SUBIR TODO
+
+        // Enviar la transcripción y el audio al servidor
         await uploadTranscriptionAndAudio(mainTranscription, fullBlob, timestamp);
 
       } catch (err) {
         console.error('Falló la transcripción:', err);
-        // Si falla la transcripción, aún así subir el audio
+        // Si falla la transcripción, subir solo el audio
         await uploadAudioOnly(fullBlob, timestamp);
       }
     });
@@ -1103,6 +1141,10 @@ const myStartBt = document.getElementById('startAll')
 
 myStartBt.addEventListener('click', () => {
   myStartBt.disabled = true;
+  btPause.disabled = false
+  btReanude.disabled = false
+  btChangeWindow.disabled = false
+  downloadAll.disabled = false
   startRecordingAllMics();
   listAndShowCams();
 

@@ -38,6 +38,9 @@ canvas, .camBox, .camBox h4{
 /* ========= 1. Background sólido ========= */
 .bcFirst  { background-color: var(--first);  }
 .bcSecond { background-color: var(--second); }
+
+.bcThird2 { background-color:  #976707 !important; }
+
 .bcThird  { background-color: var(--third);  }
 .bcFourth { background-color: var(--fourth); }
 
