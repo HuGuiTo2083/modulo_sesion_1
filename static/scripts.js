@@ -128,7 +128,7 @@ let fullRecorder, chunkRecorder, partialRecorder, partialRecorder2, partialRecor
 let chunkTimer;
 let mainTranscription
 let multipleRecorders = []
-let partialRecorderPause
+let partialRecorderPause;
 // 1) Arranca ambos recorders
 
 async function startRecordingAllMics() {
@@ -303,7 +303,7 @@ async function startRecordingAllMics() {
    
 
     // Continuar con las pistas válidas
-    console.log(`🔄 Continuando con ${validTracks.length} pistas de audio válidas`);
+    // console.log(`🔄 Continuando con ${validTracks.length} pistas de audio válidas`);
 
     // 4) Construye un MediaStream "maestro" con todas las pistas
     masterStream = new MediaStream(tracks);
