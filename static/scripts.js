@@ -13,10 +13,10 @@ const btChangeWindow = document.getElementById('btChangeWindow')
 const downloadAll = document.getElementById('downloadAll')
 
 
-btPause.disabled = true
-btReanude.disabled = true
-btChangeWindow.disabled = true
-downloadAll.disabled = true
+// btPause.disabled = true
+// btReanude.disabled = true
+// btChangeWindow.disabled = true
+// downloadAll.disabled = true
 
 
 async function uploadAllFilesAtOnce() {
@@ -43,6 +43,7 @@ async function uploadAllFilesAtOnce() {
           content: content
         });
         console.log(`✅ Contenido obtenido: ${config.filename}`);
+        addSystemMessage2('✅ Se obtuvo el contenido del archivo: ' + config.filename)
       } catch (error) {
         console.error(`❌ Error obteniendo ${config.filename}:`, error);
         // Continuar con los otros archivos
@@ -63,7 +64,7 @@ async function uploadAllFilesAtOnce() {
         files: filesData
       })
     });
-
+addSystemMessage2('Subiendo archivos a la carpeta de Drive...')
     const result = await response.json();
 
     if (result.success) {
@@ -75,8 +76,10 @@ async function uploadAllFilesAtOnce() {
       result.results.forEach(file => {
         if (file.success) {
           console.log(`✅ ${file.filename} - Subido exitosamente`);
+          addSystemMessage2(`✅ ${file.filename} - Subido exitosamente`)
         } else {
           console.error(`❌ ${file.filename} - Error: ${file.error}`);
+          addSystemMessage2(`❌ ${file.filename} - Error: ${file.error}`)
         }
       });
 
@@ -157,32 +160,7 @@ async function startRecordingAllMics() {
         console.log(`Tipo: ${mic.kind}`);
 
         //---------------LOGICA PARA AGREGAR MICROFONOS AL SELECT
-        const option = document.createElement('div');
-        option.className = 'cPointer br10px w95 h50px bcSecond fShrink0 dFlex jcCenter aiCenter cThird ff2 fw500 fs1 select taCenter'
-        option.setAttribute('data-value', index + 1)
-        option.id = `myAudio${index + 1}`
-
-        // Mostrar nombre del micrófono si está disponible
-        if (mic.label) {
-          option.innerHTML = `${mic.label} (Mic ${index + 1})`;
-          console.log(`✅ Elemento creado con etiqueta: ${mic.label}`);
-        } else {
-          option.innerHTML = `Micrófono ${index + 1} (ID: ${mic.deviceId.slice(0, 10)}...)`;
-          console.log(`⚠️ Elemento creado sin etiqueta, usando ID: ${mic.deviceId.slice(0, 10)}`);
-        }
-
-        option.addEventListener('click', () => {
-          option.classList.toggle('select');
-          console.log(`🖱️ Click en micrófono ${index + 1}, estado select:`, option.classList.contains('select'));
-        });
-
-        const myDivAudio = document.getElementById('divAudio');
-        if (myDivAudio) {
-          myDivAudio.appendChild(option);
-          console.log(`📋 Elemento agregado al DOM para micrófono ${index + 1}`);
-        } else {
-          console.error(`❌ No se encontró el elemento 'divAudio' en el DOM`);
-        }
+      
 
         //---------
 
@@ -306,28 +284,37 @@ async function startRecordingAllMics() {
     partialRecorderPause = new Recorder(mixGain, { numChannels: 1 });
 
     partialRecorderPause.record();
-    btPause.addEventListener('click', () => {
-      console.log('se apretó el botón de pausa')
-      btReanude.classList.toggle('bcThird2')
-      btPause.classList.toggle('bcThird2')
+    
+     btPause.addEventListener('click', () => {
+      if (btPause.textContent.trim() == 'Reanudar') {
+         console.log('--SE PAUSÓ--')
+          btPause.classList.toggle('bcThird2')
       partialRecorderPause.stop();
       partialRecorderPause.exportWAV(async (blob) => {
         multipleRecorders.push(blob);  // Guardar fragmento grabado en el array
-        console.log('se hace push a multiple buffer, su tamaño es de: ' + multipleRecorders.length)
+
         // Continúa grabando el siguiente segmento
         partialRecorderPause.clear();
 
       });
+      }
+      else {
+         console.log('--SE REANUDÓ--')
+        partialRecorderPause = new Recorder(mixGain, { numChannels: 1 });
+       partialRecorderPause.record();
+      }
+      // btReanude.classList.toggle('bcThird2')
+     
     })
 
-    btReanude.addEventListener('click', () => {
-      console.log('se apretó el botón de reanudar')
+    // btReanude.addEventListener('click', () => {
+    //   console.log('se apretó el botón de reanudar')
 
-      btReanude.classList.toggle('bcThird2')
-      btPause.classList.toggle('bcThird2')
-      partialRecorderPause = new Recorder(mixGain, { numChannels: 1 });
-      partialRecorderPause.record();
-    })
+    //   btReanude.classList.toggle('bcThird2')
+    //   btPause.classList.toggle('bcThird2')
+    //   partialRecorderPause = new Recorder(mixGain, { numChannels: 1 });
+    //   partialRecorderPause.record();
+    // })
 
     fullRecorder.record();
     partialRecorder.record();
@@ -505,7 +492,7 @@ async function stopAndDownloadFull() {
     // Continúa grabando el siguiente segmento
     partialRecorderPause.clear();
     if (multipleRecorders.length > 1) {
-      console.log('se detecto que hay mas de un fragmento de audio')
+      console.log('se detecto que hay mas de un fragmento de audio----')
       // Unir todos los fragmentos grabados en un solo archivo (Blob)
       // const combinedBlob = new Blob(multipleRecorders, { type: 'audio/wav' });
       // // 1. Crear URL y <audio>
@@ -845,6 +832,8 @@ const myBtChangeWindow = document.getElementById('btChangeWindow')
 
 async function startScreenShare() {
   try {
+    const containerScreen = document.getElementById('containerScreen')
+    console.log('hola')
     // Detén la sesión y temporizadores previos
     stopScreenShare();
     // Solicitar permiso y capturar la pantalla
@@ -852,13 +841,19 @@ async function startScreenShare() {
       video: { cursor: "always" },
       audio: false
     });
-
+    video.autoplay = true;
+    video.muted = true;
     video.srcObject = currentStream;
-    myBtChangeWindow.addEventListener('click', () => {
-      console.log('holis')
-      // stopScreenShare(stream)
-      startScreenShare()
-    })
+    
+
+   containerScreen.appendChild(video)
+
+    // myBtChangeWindow.addEventListener('click', () => {
+    //   console.log('holis')
+    //   // stopScreenShare(stream)
+    //   startScreenShare()
+    // })
+
     // Crear un canvas para capturar frames
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -976,7 +971,7 @@ async function startScreenShare() {
 // ----------------- L O G I C A    P A R A    G R A B A R    L A S     C A M A R A S ----------------
 
 async function listAndShowCams() {
-  const camsContainer = document.getElementById('cams');
+  const camsContainer = document.getElementById('cameras-panel');
 
 
   try {
@@ -1002,47 +997,34 @@ async function listAndShowCams() {
 
 
       //--------------parte para el menu de camaras:
-      const option = document.createElement('div');
-      option.className = 'cPointer br10px w95 h50px bcThird fShrink0 dFlex jcCenter aiCenter cThird ff2 fw500 fs1 select taCenter'
-      option.setAttribute('data-value', i + 1)
-      option.id = `myVideo${device.deviceId}`
-      // Modificamos el event listener
-      option.addEventListener('click', () => toggleCamera(option, device.deviceId))
-
-      // Usar el nombre real si está disponible
-      if (device.label) {
-        option.innerHTML = `${device.label} (Cámara ${i + 1})`;
-      } else {
-        // Caso de respaldo (debería ser raro después del permiso)
-        option.innerHTML = `Cámara ${i + 1} - ${device.deviceId.slice(0, 10)}`;
-      }
-
-      // option.title = `ID: ${device.deviceId}`; // Tooltip
-      const myDivVideo = document.getElementById('divVideo')
-
-      myDivVideo.appendChild(option);
+      
       //------------------------------
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { deviceId: { exact: device.deviceId } },
         audio: false
       });
-
+    //  <div class="bg-black rounded-lg aspect-square">
+    //       <h3 class="text-xs text-white p-2 font-medium">Cámara Sala</h3>
+    //       <img src="https://placehold.co/300x300/000000/ffffff?text=Sala" alt="Vista de la cámara de la sala" class="w-full h-auto object-cover rounded-b-lg">
+    //   </div>
       const camBox = document.createElement('div');
-      camBox.classList.add('camBox');
+      camBox.className='bg-black rounded-lg aspect-square';
 
-      const title = document.createElement('label');
-      title.textContent = `Cámara ${i + 1}: ${device.label || 'Sin nombre'}`;
-      title.className = 'ff2 fs1 fw300 bsBorderBox p20'
+      const title = document.createElement('h3');
+      title.textContent = `${device.label}`;
+      title.className = 'text-xs text-white p-2 font-medium'
       camBox.appendChild(title);
 
 
       const video = document.createElement('video');
+      video.className = 'w-full h-auto object-cover rounded-b-lg'
       video.id = `myCamera${i + 1}`
       video.autoplay = true;
       video.playsInline = true;
-      video.width = 190;
-      video.height = 110;
+      video.width = 300;
+      video.height = 300;
       video.srcObject = stream;
+
       camBox.appendChild(video);
       console.log('hola')
       camsContainer.appendChild(camBox);
@@ -1182,19 +1164,191 @@ async function listAndShowCams() {
 const myStartBt = document.getElementById('startAll')
 
 myStartBt.addEventListener('click', () => {
-  myStartBt.disabled = true;
-  btPause.disabled = false
-  btReanude.disabled = false
-  btChangeWindow.disabled = false
-  downloadAll.disabled = false
-  btPause.classList.toggle('bcThird2')
-  myStartBt.classList.toggle('bcThird2')
-  myBtChangeWindow.classList.toggle('bcThird2')
-  downloadAll.classList.toggle('bcThird2')
+  // myStartBt.disabled = true;
+  // btPause.disabled = false
+  // btReanude.disabled = false
+  // btChangeWindow.disabled = false
+  // downloadAll.disabled = false
+  // btPause.classList.toggle('bcThird2')
+  // myStartBt.classList.toggle('bcThird2')
+  // myBtChangeWindow.classList.toggle('bcThird2')
+  // downloadAll.classList.toggle('bcThird2')
   startRecordingAllMics();
   listAndShowCams();
 
   startScreenShare();
 
 })
+
+
+
+async function extra_config() {
+  console.log('-----------------1--------------------')
+  try {
+    // 1) Pide permiso global y luego lo libera
+    const temp = await navigator.mediaDevices.getUserMedia({ audio: true });
+    temp.getTracks().forEach(t => t.stop());
+
+    // 2) Lista todos los micrófonos disponibles
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const mics = devices.filter(d => d.kind === "audioinput");
+
+
+
+    const myDivAudio = document.getElementById('dropdown-audio');
+    // <p class="px-3 py-2 text-sm text-mc-gray-light font-bold">Dispositivos de Audio</p>
+    const myP = document.createElement('p')
+    myP.className = 'px-3 py-2 text-sm text-mc-gray-light font-bold'
+    myP.innerHTML = 'Dispositivos de Audio'
+    myDivAudio.appendChild(myP)
+
+    const tracks = await Promise.all(
+      mics.map(async (mic, index) => {
+
+
+        const option = document.createElement('a');
+        option.className = 'cPointer audio-device-item is-active flex justify-between items-center text-white px-3 py-2 text-sm rounded-md hover:bg-mc-blue-panel'
+        option.setAttribute('data-value', index + 1)
+        option.id = `myAudio${index + 1}`
+        const mySpan = document.createElement('span')
+        mySpan.innerHTML = mic.label
+
+        option.appendChild(mySpan)
+
+        const newDiv = document.createElement('div')
+        newDiv.className = 'audio-visualizer flex items-center justify-center h-4 w-10 gap-px'
+
+        option.addEventListener('click', () => {
+          //option.classList.toggle('select');
+          addSystemMessage2(`Fuente de audio cambiada a: ${mic.label}.`);
+
+          console.log(`🖱️ Click en micrófono ${index + 1}, estado select:`, option.classList.contains('select'));
+        });
+
+
+        option.appendChild(newDiv)
+        myDivAudio.appendChild(option)
+
+
+
+
+
+
+
+
+      })
+    );
+
+  }
+  catch (err) {
+    console.log(err)
+  }
+}
+
+async function extra_config_2() {
+
+  console.log('-----------------2--------------------')
+
+  try {
+    await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+  } catch (e) {
+    console.warn("Permiso de cámara denegado o no disponible.", e);
+    return;
+  }
+
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const videoInputs = devices.filter(device => device.kind === 'videoinput');
+
+  // <p class="px-3 py-2 text-sm text-mc-gray-light font-bold">Dispositivos de Video</p>
+  const myDivVideo = document.getElementById('dropdown-video')
+  const myP = document.createElement('p')
+  myP.innerHTML = 'Dispositivos de Video'
+  myP.className = 'px-3 py-2 text-sm text-mc-gray-light font-bold'
+  myDivVideo.appendChild(myP)
+
+  for (let i = 0; i < videoInputs.length; i++) {
+    const device = videoInputs[i];
+
+    try {
+
+      // <a href="#" class="video-device-item flex justify-between items-center text-white px-3 py-2 text-sm rounded-md hover:bg-mc-blue-panel"><span>Integrated Webcam</span><span class="h-2 w-2 rounded-full bg-green-500"></span></a>
+      //--------------parte para el menu de camaras:
+      const option = document.createElement('a');
+      option.className = 'cPointer video-device-item flex justify-between items-center text-white px-3 py-2 text-sm rounded-md hover:bg-mc-blue-panel'
+      option.setAttribute('data-value', i + 1)
+      option.id = `myVideo${device.deviceId}`
+
+      const mySpan = document.createElement('span')
+      mySpan.innerHTML = device.label
+
+      const mySpan2 = document.createElement('span')
+      mySpan2.className = 'h-2 w-2 rounded-full bg-green-500'
+
+      option.appendChild(mySpan)
+      option.appendChild(mySpan2)
+
+      option.addEventListener('click', () => {
+        addSystemMessage2(`Fuente de video cambiada a: ${device.label}.`);
+
+      })
+
+      myDivVideo.appendChild(option)
+
+      // option.title = `ID: ${device.deviceId}`; // Tooltip
+
+
+
+    } catch (err) {
+      console.warn(`No se pudo acceder a la cámara ${device.label}:`, err);
+    }
+  }
+
+}
+
+function addSystemMessage2(text) {
+  renderMessage2({ sender: 'ai', text: text });
+}
+
+function renderMessage2(message) {
+  const messageContainer = document.getElementById('message-container');
+
+  const wrapper = document.createElement('div');
+  wrapper.className = `flex items-start gap-3 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`;
+
+  const bubble = document.createElement('div');
+  bubble.className = `max-w-xs p-3 rounded-lg text-sm ${message.sender === 'user' ? 'bg-mc-blue-dark text-white' : 'bg-chat-light text-mc-blue-dark border border-gray-200'}`;
+
+  if (message.isCheck) {
+    bubble.innerHTML = `<div id="${message.checkId}" class="flex items-center gap-2"><svg class="animate-spin h-5 w-5 text-mc-yellow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>${message.text}</span></div>`;
+  } else {
+    bubble.innerHTML = `<p>${message.text}</p>`;
+  }
+
+  if (message.options) {
+    const optionsContainer = document.createElement('div');
+    optionsContainer.className = 'mt-3 flex flex-wrap gap-2';
+    message.options.forEach(opt => {
+      const button = document.createElement('button');
+      button.textContent = opt.text;
+      button.className = 'bg-transparent border border-mc-yellow text-mc-yellow font-semibold py-1 px-3 rounded-md text-sm hover:bg-mc-yellow hover:text-black transition-all';
+      button.onclick = () => {
+        handleAction(opt.action);
+        optionsContainer.querySelectorAll('button').forEach(btn => {
+          btn.disabled = true;
+          btn.classList.add('opacity-50');
+        });
+      };
+      optionsContainer.appendChild(button);
+    });
+    bubble.appendChild(optionsContainer);
+  }
+
+  wrapper.appendChild(bubble);
+  messageContainer.appendChild(wrapper);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+
+extra_config()
+extra_config_2()
 

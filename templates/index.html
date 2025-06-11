@@ -2,126 +2,533 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Monitoreo de Pantalla</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoreo Inteligente con Asistente - Montecristo AInsights</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Montserrat:wght@300;400;500;700&display=swap" rel="stylesheet">
+        <link href="../static/myClasses.css" type="text/css" rel="stylesheet">
+
     <style>
-       
-        h1{text-align:center;margin-bottom:1rem}
+        /* Estilos corporativos y tipografía */
+        body {
+            font-family: 'Montserrat', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background-color: #f3f4f6;
+        }
+        .font-serif {
+            font-family: 'DM Serif Display', serif;
+        }
+        .bg-mc-blue-dark { background-color: #1b2f38; }
+        .text-mc-blue-dark { color: #1b2f38; }
+        .bg-mc-blue-panel { background-color: #233b45; }
+        .text-mc-yellow { color: #e59903; }
+        .bg-mc-yellow { background-color: #e59903; }
+        .border-mc-yellow { border-color: #e59903; }
+        .ring-mc-yellow { --tw-ring-color: #e59903; }
+        .text-mc-red { color: #8f1724; }
+        .bg-mc-red { background-color: #8f1724; }
+        .text-mc-gray-light { color: #b3c6cf; }
+        .bg-chat-light { background-color: #f3f4f6; }
+
+        /* Estilos para transiciones y animaciones */
+        .transition-all { transition: all 0.3s ease-in-out; }
+
+        /* Estilos para el scroll del chatbot */
+        #chat-window::-webkit-scrollbar { width: 8px; }
+        #chat-window::-webkit-scrollbar-track { background: #e5e7eb; }
+        #chat-window::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 4px; }
+        #chat-window::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+        /* Estilo para los botones de control (ACTUALIZADO) */
+        .control-btn {
+             @apply bg-transparent text-mc-gray-light p-3 rounded-full flex items-center justify-center hover:bg-white/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent;
+        }
+        .control-btn.active {
+            @apply bg-mc-red text-white;
+        }
         
-       
+        /* Estilos para el panel de chat colapsable */
+        #chatbot-panel {
+            transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out, border 0.5s ease-in-out, margin 0.5s ease-in-out;
+            max-height: 100vh;
+            overflow: hidden;
+        }
+
+        #chatbot-panel.is-collapsed {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-bottom: 0;
+            border-width: 0;
+        }
+        
+        /* Estilos para el visualizador de audio */
+        .audio-visualizer .audio-bar {
+            width: 3px;
+            background-color: #4ade80;
+            border-radius: 2px;
+            transition: height 0.1s ease-in-out;
+        }
     </style>
-    <link href="../static/styles.css" type="text/css" rel="stylesheet">
-    <link href="../static/myClasses.css" type="text/css" rel="stylesheet">
-
 </head>
-<body class="bcFirst m0 p0 oxHidden">
-    <div class="dGrid gtc_1 gtr_1_7  w100vw h100vh">
- <!-----------------------------------------------------Parte del header----- -->
+<body class="bg-white text-mc-blue-dark">
 
-        <div class="w100 h100 dGrid gtc_1 gtr_1_1 mb20 gap10" id="myHeader">
-            <!--------------------------------Titulo----- -->
-            <div class="dFlex aiCenter jcCenter cThird ff1 fw500 fs6"> Monitoreo Inteligente de Pantalla</div>
-            <!--------------------------------Botones----- -->
-
-           <div class="w100 h100  dFlex aiCenter jcCenter gap20">
-            
-            <!-- ----boton de empezar -->
-             <button class="cPointer w5 h10vh bcThird bNone br10px ff2 fs4 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="startAll">
-                <img  src="{{ url_for('static', filename='icons/start.png') }}" class="myImg3"></button>
-              <!-- ----boton de cambiar pestaña -->
-              <button class="cPointer trans0-5 bcThird bNone br10px w5 h10vh dFlex aiCenter jcCenter hoverLight bcThird2" id="btChangeWindow">
-                <img  src="{{ url_for('static', filename='icons/change_window.png') }}" class="myImg3">
-              </button>
-             <!-- ----boton de pausar -->
-              <button class="cPointer trans0-5 bcThird bNone br10px w5 h10vh dFlex aiCenter jcCenter hoverLight bcThird2" id="btPause">
-                <img  src="{{ url_for('static', filename='icons/pause.png') }}" class="myImg3">
-              </button>
-                 <!-- ----boton de reanudar -->
-                 <button class="cPointer trans0-5 bcThird bNone br10px w5 h10vh dFlex aiCenter jcCenter hoverLight bcThird2" id="btReanude">
-                    <img  src="{{ url_for('static', filename='icons/reanude.png') }}" class="myImg3">
-                  </button>
-             <!-- ----boton de parar -->
-             <button class="cPointer w5 h10vh bcThird bNone br10px ff2 fs3 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond bcThird2" id="downloadAll">
-                <img src="{{ url_for('static', filename='icons/stop.png') }}"
-                    class="myImg3" alt="Stop">
-            </button>
-                <!-- ----parte para video -->
-             <div class="w10 h100  dFlex jcCenter aiCenter pRelative">
-                <button class="cPointer w100 h10vh bcThird bNone br10px ff2 fs3 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="btVideo">Video ▼</button>
-                <!-- ------ desplegable de video ------- -->
-                <div class="zIndex2 pAbsolute left0 top10vh w20vw min_h10vh hAuto  bcThird mt20 dNone br10px   aiCenter aiCenter fdColumn bsBorderBox p10 gap20" id="divVideo">
-                    
-                   </div>
-                   
-
-                
-                <!-- ---------------------- -->
-             </div>
-             <!-- -------------parte para audio ------------- -->
-             <div class="w10 h100  dFlex jcCenter aiCenter pRelative">
-                <button class="cPointer w100 h10vh bcThird bNone br10px ff2 fs3 fw500 dFlex aiCenter jcCenter hoverLight trans0-5 cSecond" id="btAudio">Audio ▼</button>
-                <!-- ------ desplegable de audio ------- -->
-                <div class="zIndex2 pAbsolute left0 top10vh w20vw min_h10vh hAuto  bcThird mt20 dNone br10px   aiCenter aiCenter fdColumn bsBorderBox p10 gap20" id="divAudio">
-                    
-                   </div>
-                   
-
-                
-                <!-- ---------------------- -->
-             </div>
-
-         </div>
-            <!----------------------------------- -->
-
-    
-        </div>
-<!------------------------------------------------------Parte de las camaras----- -->
-    <div class="w100 h100  dFlex gap20 bsBorderBox p10 dFlex">
-        <!-- Contenedor del stream -->
-        <div class=" hAuto w70 dFlex jcCenter aiCenter bsBorderBox p10 br10px bcWhite">
-            <video id="myDivScreen" autoplay playsinline style="width:100%; height:auto;"></video>
-        </div>
-        <!-- Contenedor de camaras -->
-         <div class="w25 h100 dGrid gtc_1 gtr_1_2 gap20">
-            <div id="cams" class=" w100 bcWhite br10px bsBorderBox  jcCenter aiCenter oHidden bsBorderBox p20">
-   
-    
-            </div>
-
-            <div  class=" w100 bcWhite br10px bsBorderBox dFlex jcCenter aiCenter pRelative oHidden">
-               <div class="b2_solid_third br10px w95 h45vh oxHidden oyAuto dFlex jcStart aiCenter bsBorderBox pt10 fdColumn gap20" id="divImportant">
-                 <!-- <div class="w90 fShrink0 hAuto taCenter dFlex aiCenter jcCenter bsBorderBox p10 bcThirdLight ff2 fs1 br5px">
-                    Prueba Visual                  
-                 </div>
-                 <div class="w90  fShrink0 hAuto taCenter dFlex aiCenter jcCenter bsBorderBox p10 bcThirdLight ff2 fs1 br5px">
-                    Prueba Visual
-                  
-                 </div> -->
-
-                 
-               </div>
-    
-            </div>
+    <div id="app" class="p-4 sm:p-6 lg:p-8 min-h-screen flex flex-col">
         
+        <!-- ENCABEZADO -->
+        <header class="mb-6 flex-shrink-0 flex justify-between items-center flex-wrap gap-y-2">
+            <div>
+                <h1 class="font-serif text-2xl md:text-3xl text-mc-red">Monitoreo Inteligente AInsights</h1>
+                <p class="text-mc-blue-dark text-sm md:text-base">Sesión: Consultoría Onboarding Equipo de Ventas</p>
+            </div>
+            <div class="flex-shrink-0">
+                <img src="https://gremiogestor.org/wp-content/uploads/2024/11/AI-Montecristo-horizontal.png" alt="Logo de Montecristo AInsights" class="h-16 w-auto" onerror="this.onerror=null;this.src='https://placehold.co/240x50/ffffff/8f1724?text=Montecristo+AInsights';">
+            </div>
+        </header>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
+
+            <!-- COLUMNA IZQUIERDA (Monitor) -->
+            <div class="lg:col-span-8 xl:col-span-9 bg-mc-blue-panel p-4 rounded-lg flex flex-col">
+                <!-- Vista Principal (Pantalla) -->
+                <div class="flex-grow bg-black rounded-md flex items-center justify-center relative" id="mainScreen">
+                 <div 
+                  alt="Pantalla del presentador" class="w-full h-full object-contain rounded-md" id="containerScreen">
+                <video id="myDivScreen" class="w-full h-full mx-auto block rounded-lg"></video>
+                </div>
+
+                    <!-- Barra de Controles sobre el video (ACTUALIZADO) -->
+                    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-auto bg-black/40 backdrop-blur-md p-2 rounded-xl flex items-center justify-center gap-2">
+                        <!-- Controles de monitoreo -->
+                        <div class="flex items-center gap-2">
+                            <!-- huhm -->
+                            <button id="startAll" class="bg-mc-yellow text-white font-bold py-3 px-5 rounded-lg flex items-center gap-2 hover:opacity-90 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg>
+                                <span>Iniciar</span>
+                            </button>
+                             <div id="controls-active" class="flex items-center gap-2 hidden">
+                                <button id="btPause" class="bg-mc-yellow text-white font-bold py-3 px-5 rounded-lg flex items-center gap-2 hover:opacity-90 transition-all shadow-md">
+                                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd" /></svg>
+                                    <span>Pausar</span>
+                                </button>
+                                <button id="btn-stop" class="bg-mc-red text-white font-bold py-3 px-5 rounded-lg flex items-center gap-2 hover:opacity-90 transition-all shadow-md">
+                                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 9a1 1 0 00-1 1v1a1 1 0 001 1h4a1 1 0 001-1v-1a1 1 0 00-1-1H8z" clip-rule="evenodd" /></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="h-8 w-px bg-white/30"></div>
+
+                        <!-- Controles de dispositivos -->
+                        <div class="flex items-center gap-2">
+                            <div class="relative">
+                                <button id="btn-audio" class="control-btn" aria-label="Dispositivos de Audio" disabled>
+                                    <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                                </button>
+                                <!-- ------lista de audios----- -->
+
+                                <div id="dropdown-audio" class="hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 bg-mc-blue-dark rounded-lg shadow-lg p-2 z-10">
+                                    <!-- <p class="px-3 py-2 text-sm text-mc-gray-light font-bold">Dispositivos de Audio</p> -->
+                                    <!-- ----------------- -->
+                                    <!-- <a href="#" class="audio-device-item is-active flex justify-between items-center text-white px-3 py-2 text-sm rounded-md hover:bg-mc-blue-panel">
+                                        <span>Micrófono integrado</span>
+                                        <div class="audio-visualizer flex items-center justify-center h-4 w-10 gap-px"></div>
+                                    </a> -->
+                                    <!-- ----------------- -->
+
+                                    <!-- <a href="#" class="audio-device-item flex justify-between items-center text-white px-3 py-2 text-sm rounded-md hover:bg-mc-blue-panel">
+                                        <span>Headset (Logitech)</span>
+                                        <div class="audio-visualizer flex items-center justify-center h-4 w-10 gap-px"></div>
+                                    </a> -->
+                                    <!-- ------ -->
+                                </div>
+                            </div>
+                             <div class="relative">
+                                <button id="btn-video" class="control-btn" aria-label="Dispositivos de Video" disabled>
+                                   <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                </button>
+                                 <div id="dropdown-video" class="hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-mc-blue-dark rounded-lg shadow-lg p-2 z-10">
+                                    <!-- <p class="px-3 py-2 text-sm text-mc-gray-light font-bold">Dispositivos de Video</p>
+                                    <a href="#" class="video-device-item flex justify-between items-center text-white px-3 py-2 text-sm rounded-md hover:bg-mc-blue-panel"><span>Integrated Webcam</span><span class="h-2 w-2 rounded-full bg-green-500"></span></a>
+                                    <a href="#" class="video-device-item flex justify-between items-center text-white px-3 py-2 text-sm rounded-md hover:bg-mc-blue-panel"><span>Logitech C920</span></a>
+                                -->
+                                </div>
+                            </div>
+                        </div>
+
+                         <div class="h-8 w-px bg-white/30"></div>
+                        
+                        <!-- Controles de UI -->
+                        <div class="flex items-center gap-2">
+                            <button id="btn-toggle-chat" class="control-btn active" aria-label="Mostrar/Ocultar Chatbot">
+                               <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                             </button>
+                             <button id="downloadAll" class="control-btn" disabled>
+                                <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                     <div id="status" class="absolute top-4 right-4 flex items-center gap-2 text-white bg-black bg-opacity-30 p-2 rounded-lg">
+                        <span id="status-indicator" class="h-3 w-3 rounded-full bg-gray-400"></span>
+                        <span id="status-text" class="text-sm font-medium">Esperando</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLUMNA DERECHA (Sidebar) -->
+            <div id="sidebar" class="lg:col-span-4 xl:col-span-3 flex flex-col gap-6 min-h-0">
+                <!-- Chatbot -->
+                <div id="chatbot-panel" class="bg-white border border-gray-200 p-4 rounded-lg flex flex-col flex-grow min-h-0">
+                    <h2 class="font-serif text-xl mb-4 text-mc-blue-dark flex-shrink-0">Asistente AInsights</h2>
+                    <main id="chat-window" class="flex-grow overflow-y-auto mb-4 pr-2 -mr-2">
+                        <div id="message-container" class="space-y-4"></div>
+                    </main>
+                    <footer class="flex-shrink-0">
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="user-input" class="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-mc-yellow" placeholder="Escribe tu mensaje...">
+                            <button id="send-btn" class="bg-mc-yellow text-white p-3 rounded-lg hover:opacity-90 transition-opacity flex-shrink-0">
+                                <svg class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+                            </button>
+                        </div>
+                    </footer>
+                </div>
+                <!-- Cámaras -->
+                <div id="cameras-panel" class="flex-shrink-0 grid grid-cols-2 gap-4">
+                    <!-- <div class="bg-black rounded-lg aspect-square">
+                        <h3 class="text-xs text-white p-2 font-medium">Cámara Sala</h3>
+                        <img src="https://placehold.co/300x300/000000/ffffff?text=Sala" alt="Vista de la cámara de la sala" class="w-full h-auto object-cover rounded-b-lg">
+                    </div>
+                    <div class="bg-black rounded-lg aspect-square">
+                         <h3 class="text-xs text-white p-2 font-medium">Cámara Participantes</h3>
+                        <img src="https://placehold.co/300x300/000000/ffffff?text=Participantes" alt="Vista de la cámara de los participantes" class="w-full h-auto object-cover rounded-b-lg">
+                    </div> -->
+                </div>
+            </div>
+        </main>
+        
+        <div id="notification" class="hidden fixed bottom-5 right-5 bg-white border border-gray-300 text-mc-blue-dark py-3 px-5 rounded-lg shadow-xl animate-pulse">
+            <p>✓ Reporte descargado con éxito.</p>
         </div>
-       
     </div>
- <!---------------------------------------------------------------------------------------- -->
 
-    </div>
     
-   
- 
-
-  
-    <!-- Carga el UMD build directamente desde la rama principal -->    
+        <!-- Carga el UMD build directamente desde la rama principal -->    
     <script src="https://cdn.jsdelivr.net/gh/mattdiamond/Recorderjs@master/dist/recorder.js"></script>
 
     <script src="../static/funcionalidad.js"></script>
 
     
     <script src="../static/scripts.js"></script>
+    <script>
+           console.log('-----------------3--------------------')
+
+        // --- SELECTORES DE ELEMENTOS ---
+        const chatbotPanel = document.getElementById('chatbot-panel');
+        const camerasPanel = document.getElementById('cameras-panel');
+        const btnStart = document.getElementById('startAll');
+        btnStart.disabled = true
+        const controlsActive = document.getElementById('controls-active');
+        const btnPause = document.getElementById('btPause');
+        const btnStop = document.getElementById('btn-stop');
+        const btnDownload = document.getElementById('downloadAll');
+        const btnToggleChat = document.getElementById('btn-toggle-chat');
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
+        const notification = document.getElementById('notification');
+        const btnAudio = document.getElementById('btn-audio');
+        const dropdownAudio = document.getElementById('dropdown-audio');
+        const btnVideo = document.getElementById('btn-video');
+        const dropdownVideo = document.getElementById('dropdown-video');
+        const chatWindow = document.getElementById('chat-window');
+        const messageContainer = document.getElementById('message-container');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        let conversationFlow;
+        let audioSimulationInterval = null;
 
 
+        // --- LÓGICA DEL CHATBOT Y ASISTENTE ---
+        const initialFlow = [
+            { sender: 'ai', text: '¡Hola! Soy tu asistente de AInsights. Para empezar, vamos a verificar el sistema.', options: [{ text: 'Sí, verificar sistema', action: 'startCheck' }] }
+        ];
+
+        const checkFlow = {
+            startCheck: [
+                { sender: 'user', text: 'Sí, verificar sistema' },
+                { sender: 'ai', text: 'Perfecto. Realizando una verificación rápida...' },
+                { sender: 'ai', text: 'Verificando permisos...', isCheck: true, checkId: 'perm-check' }
+            ],
+            permissionSuccess: [{ sender: 'ai', text: 'Verificando audio y video...', isCheck: true, checkId: 'media-check' }],
+            mediaSuccess: [
+                { sender: 'ai', text: '¡Excelente! Todos los sistemas están listos.' },
+                { sender: 'ai', text: 'El panel de control está habilitado. Puedes iniciar el monitoreo cuando lo desees.' }
+            ],
+            startMonitoring: [ { sender: 'ai', text: 'Iniciando monitoreo... El sistema ahora está analizando el contexto de la reunión.' }],
+            stopMonitoring: [ { sender: 'ai', text: 'Monitoreo finalizado. El reporte está listo para ser descargado.' }]
+        };
+        
+        function addSystemMessage(text) {
+             renderMessage({ sender: 'ai', text: text });
+        }
+
+        function renderMessage(message) {
+
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex items-start gap-3 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = `max-w-xs p-3 rounded-lg text-sm ${message.sender === 'user' ? 'bg-mc-blue-dark text-white' : 'bg-chat-light text-mc-blue-dark border border-gray-200'}`;
+            
+            if (message.isCheck) {
+                bubble.innerHTML = `<div id="${message.checkId}" class="flex items-center gap-2"><svg class="animate-spin h-5 w-5 text-mc-yellow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>${message.text}</span></div>`;
+            } else {
+                 bubble.innerHTML = `<p>${message.text}</p>`;
+            }
+            
+            if (message.options) {
+                const optionsContainer = document.createElement('div');
+                optionsContainer.className = 'mt-3 flex flex-wrap gap-2';
+                message.options.forEach(opt => {
+                    const button = document.createElement('button');
+                    button.textContent = opt.text;
+                    button.className = 'bg-transparent border border-mc-yellow text-mc-yellow font-semibold py-1 px-3 rounded-md text-sm hover:bg-mc-yellow hover:text-black transition-all';
+                    button.onclick = () => {
+                        handleAction(opt.action);
+                        optionsContainer.querySelectorAll('button').forEach(btn => {
+                           btn.disabled = true;
+                           btn.classList.add('opacity-50');
+                        });
+                    };
+                    optionsContainer.appendChild(button);
+                });
+                bubble.appendChild(optionsContainer);
+            }
+            
+            wrapper.appendChild(bubble);
+            messageContainer.appendChild(wrapper);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        async function processConversation() {
+            for (const message of conversationFlow) {
+                await new Promise(resolve => setTimeout(resolve, message.sender === 'ai' ? 800 : 100));
+                renderMessage(message);
+
+                if(message.isCheck) {
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    const checkDiv = document.getElementById(message.checkId);
+                    checkDiv.innerHTML = `<svg class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg><span>${message.text.replace('Verificando', 'Verificado:')}</span>`;
+                    
+                    if (message.checkId === 'perm-check') handleAction('permissionSuccess');
+                    if (message.checkId === 'media-check') handleAction('mediaSuccess');
+                }
+            }
+        }
+
+        function handleAction(action) {
+            if (checkFlow[action]) {
+                conversationFlow = checkFlow[action];
+                processConversation();
+            }
+            if (action === 'mediaSuccess') {
+                const controlButtons = document.querySelectorAll('.control-btn, #startAll, #downloadAll');
+                controlButtons.forEach(btn => btn.disabled = false);
+                statusText.textContent = 'Listo para iniciar';
+            }
+        }
+        
+        sendBtn.addEventListener('click', () => {
+            const text = userInput.value.trim();
+            if (!text) return;
+            renderMessage({ sender: 'user', text });
+            userInput.value = '';
+        });
+        userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendBtn.click(); });
+
+
+        // --- LÓGICA DE CONTROLES DEL MONITOR ---
+        function updateMonitorUI(state) {
+            const startBtnText = btnStart.querySelector('span');
+            const pauseBtnText = btnPause.querySelector('span');
+            
+            if (state === 'start') {
+                btnStart.classList.add('hidden');
+                controlsActive.classList.remove('hidden');
+                statusIndicator.className = 'h-3 w-3 rounded-full bg-green-500 animate-pulse';
+                statusText.textContent = 'Monitoreando';
+            } else if (state === 'pause') {
+                pauseBtnText.textContent = 'Reanudar';
+                statusIndicator.classList.remove('animate-pulse');
+                statusIndicator.classList.replace('bg-green-500', 'bg-mc-yellow');
+                statusText.textContent = 'En Pausa';
+            } else if (state === 'resume') {
+                pauseBtnText.textContent = 'Pausar';
+                statusIndicator.classList.add('animate-pulse');
+                 statusIndicator.classList.replace('bg-mc-yellow', 'bg-green-500');
+                statusText.textContent = 'Monitoreando';
+            } else if (state === 'stop') {
+                btnStart.classList.remove('hidden');
+                controlsActive.classList.add('hidden');
+                statusIndicator.className = 'h-3 w-3 rounded-full bg-gray-400';
+                statusText.textContent = 'Finalizado';
+                pauseBtnText.textContent = 'Pausar';
+            }
+        }
+
+        btnStart.addEventListener('click', () => { updateMonitorUI('start'); handleAction('startMonitoring'); });
+        
+        btnPause.addEventListener('click', () => {
+            const isPaused = btnPause.querySelector('span').textContent.trim() === 'Pausar';
+            if(isPaused) {
+                console.log('antes')
+                updateMonitorUI('pause');
+                addSystemMessage('El monitoreo ha sido pausado.');
+            } else {
+                updateMonitorUI('resume');
+                addSystemMessage('El monitoreo se ha reanudado.');
+            }
+        });
+        
+        btnStop.addEventListener('click', () => { updateMonitorUI('stop'); handleAction('stopMonitoring'); });
+        
+        btnDownload.addEventListener('click', () => {
+            notification.classList.remove('hidden');
+            setTimeout(() => { notification.classList.add('hidden'); }, 3000);
+            addSystemMessage('Se ha generado y descargado el reporte de la sesión.');
+        });
+
+        btnToggleChat.addEventListener('click', () => {
+            chatbotPanel.classList.toggle('is-collapsed');
+            const isCollapsed = chatbotPanel.classList.contains('is-collapsed');
+            btnToggleChat.classList.toggle('active', !isCollapsed);
+
+            // Cambiar la disposición de las cámaras
+            if (isCollapsed) {
+                camerasPanel.classList.remove('grid-cols-2');
+                camerasPanel.classList.add('grid-cols-1');
+            } else {
+                camerasPanel.classList.remove('grid-cols-1');
+                camerasPanel.classList.add('grid-cols-2');
+            }
+        });
+        
+        // --- LOGICA DE DROPDOWNS Y VISUALIZADOR DE AUDIO ---
+
+        function startAudioSimulation() {
+            if (audioSimulationInterval) return;
+
+            const visualizers = document.querySelectorAll('.audio-visualizer');
+            visualizers.forEach(vis => {
+                if (vis.children.length === 0) {
+                    for (let i = 0; i < 7; i++) {
+                        const bar = document.createElement('div');
+                        bar.className = 'audio-bar';
+                        bar.style.height = '2px';
+                        vis.appendChild(bar);
+                    }
+                }
+            });
+
+            audioSimulationInterval = setInterval(() => {
+                document.querySelectorAll('.audio-device-item').forEach(device => {
+                    const visualizer = device.querySelector('.audio-visualizer');
+                    const isActive = device.classList.contains('is-active');
+                    const bars = visualizer.querySelectorAll('.audio-bar');
+
+                    bars.forEach(bar => {
+                        const maxHeight = 16;
+                        const minHeight = 2;
+                        let randomHeight;
+                        if (isActive) {
+                            randomHeight = Math.random() * maxHeight;
+                        } else {
+                            randomHeight = Math.random() * (maxHeight / 4);
+                        }
+                        bar.style.height = `${Math.max(randomHeight, minHeight)}px`;
+                    });
+                });
+            }, 150);
+        }
+
+        function stopAudioSimulation() {
+            clearInterval(audioSimulationInterval);
+            audioSimulationInterval = null;
+            document.querySelectorAll('.audio-visualizer .audio-bar').forEach(bar => {
+                bar.style.height = '2px';
+            });
+        }
+        
+        function setupDropdown(button, dropdown) {
+            button.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const isHidden = dropdown.classList.contains('hidden');
+                
+                dropdownAudio.classList.add('hidden');
+                dropdownVideo.classList.add('hidden');
+                stopAudioSimulation();
+
+                if (isHidden) {
+                    dropdown.classList.remove('hidden');
+                    if (dropdown.id === 'dropdown-audio') {
+                        startAudioSimulation();
+                    }
+                }
+            });
+        }
+        
+        setupDropdown(btnAudio, dropdownAudio);
+        setupDropdown(btnVideo, dropdownVideo);
+
+        window.addEventListener('click', () => {
+            dropdownAudio.classList.add('hidden');
+            dropdownVideo.classList.add('hidden');
+            stopAudioSimulation();
+        });
+
+        document.querySelectorAll('.audio-device-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.audio-device-item').forEach(i => i.classList.remove('is-active'));
+                item.classList.add('is-active');
+                const deviceName = item.querySelector('span').textContent;
+                addSystemMessage(`Fuente de audio cambiada a: ${deviceName}.`);
+                dropdownAudio.classList.add('hidden');
+                stopAudioSimulation();
+            });
+        });
+
+        document.querySelectorAll('.video-device-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.video-device-item .bg-green-500').forEach(dot => dot.remove());
+                const deviceName = item.querySelector('span').textContent;
+                const dot = document.createElement('span');
+                dot.className = 'h-2 w-2 rounded-full bg-green-500';
+                item.appendChild(dot);
+                addSystemMessage(`Fuente de video cambiada a: ${deviceName}.`);
+                dropdownVideo.classList.add('hidden');
+            });
+        });
+
+        // --- INICIALIZACIÓN ---
+        function initialize() {
+            const controlButtons = document.querySelectorAll('.control-btn, #btn-start, #btn-download');
+            controlButtons.forEach(btn => btn.disabled = true);
+            btnToggleChat.disabled = false;
+            
+            conversationFlow = initialFlow;
+            processConversation();
+        }
+
+        initialize();
     </script>
 </body>
 </html>
