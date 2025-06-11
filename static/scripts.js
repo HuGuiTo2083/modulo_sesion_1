@@ -848,11 +848,11 @@ async function startScreenShare() {
 
    containerScreen.appendChild(video)
 
-    // myBtChangeWindow.addEventListener('click', () => {
-    //   console.log('holis')
-    //   // stopScreenShare(stream)
-    //   startScreenShare()
-    // })
+    myBtChangeWindow.addEventListener('click', () => {
+      console.log('holis')
+      // stopScreenShare(stream)
+      startScreenShare()
+    })
 
     // Crear un canvas para capturar frames
     const canvas = document.createElement('canvas');

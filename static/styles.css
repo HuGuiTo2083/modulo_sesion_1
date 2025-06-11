@@ -76,6 +76,11 @@ canvas, .camBox, .camBox h4{
     font-family: 'Monserrat';
 }
 
+#btChangeWindow{
+    width: 30px;
+    height: 30px;
+}
+
 
 
 .myImg{
