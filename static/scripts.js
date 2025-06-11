@@ -448,7 +448,42 @@ async function startRecordingAllMics() {
 // -------------------------------------------------
 
 // 2) Para todo y descarga el WAV completo
+// Une varios blobs WAV → 1 solo blob WAV (sin cabeceras duplicadas)
+async function mergeWavBlobs(blobs) {
+  // 1) Carga cada blob en memoria
+  const arrays = await Promise.all(
+    blobs.map(async b => new Uint8Array(await b.arrayBuffer()))
+  );
 
+  // 2) Usa la primera cabecera (44 bytes) como base
+  const header = arrays[0].slice(0, 44);
+  const pcmParts = arrays.map(a => a.slice(44));        // quita cabeceras
+  const pcmLen = pcmParts.reduce((n, p) => n + p.length, 0); // bytes de audio
+  const fileLen = 44 + pcmLen;
+
+  // 3) Actualiza tamaños en la cabecera (little-endian)
+  const view = new DataView(header.buffer);
+  view.setUint32( 4, fileLen - 8, true);  // ChunkSize  = archivo – 8
+  view.setUint32(40, pcmLen,      true);  // Subchunk2Size = solo PCM
+
+  // 4) Concatena cabecera + PCM
+  const out = new Uint8Array(fileLen);
+  out.set(header, 0);
+  let offset = 44;
+  pcmParts.forEach(p => { out.set(p, offset); offset += p.length; });
+
+  return new Blob([out], { type: 'audio/wav' });
+}
+
+// “Mock” minimal de Recorder.js basado en un blob ya existente
+function makeBlobRecorder(blob) {
+  return {
+    // compatibilidad con tu exportWAV(cb)
+    exportWAV: cb => cb(blob),
+    // por si luego quieres acceder directo
+    blob
+  };
+}
 
 // Ejemplo de función para detener y descargar la mezcla completa:
 // Función para detener y descargar la mezcla completa
@@ -472,22 +507,30 @@ async function stopAndDownloadFull() {
     if (multipleRecorders.length > 1) {
       console.log('se detecto que hay mas de un fragmento de audio')
       // Unir todos los fragmentos grabados en un solo archivo (Blob)
-      const combinedBlob = new Blob(multipleRecorders, { type: 'audio/wav' });
-      // 1. Crear URL y <audio>
-      const url = URL.createObjectURL(combinedBlob);
-      const audio = new Audio(url);
-      audio.loop = false;              // opcional
-      await audio.play();               // necesita un gesto de usuario previo en la página
+      // const combinedBlob = new Blob(multipleRecorders, { type: 'audio/wav' });
+      // // 1. Crear URL y <audio>
+      // const url = URL.createObjectURL(combinedBlob);
+      // const audio = new Audio(url);
+      // audio.loop = false;              // opcional
+      // await audio.play();               // necesita un gesto de usuario previo en la página
 
-      // 2. Capturar el stream de reproducción
-      const combinedStream = audio.captureStream();
+      // // 2. Capturar el stream de reproducción
+      // const combinedStream = audio.captureStream();
 
-      // 3. Usar ese stream como fuente del nuevo Recorder
-      fullRecorder = new Recorder(
-        audioCtx.createMediaStreamSource(combinedStream),
-        { numChannels: 1 }
-      );
-      fullRecorder.record();
+      // // 3. Usar ese stream como fuente del nuevo Recorder
+      // fullRecorder = new Recorder(
+      //   audioCtx.createMediaStreamSource(combinedStream),
+      //   { numChannels: 1 }
+      // );
+      // fullRecorder.record();
+
+      
+  // ① Une los trozos SIN esperar 5 s
+  const mergedBlob = await mergeWavBlobs(multipleRecorders);
+
+  // ② “Guárdalo” en fullRecorder con la misma API que usas después
+  fullRecorder = makeBlobRecorder(mergedBlob);
+  
     }
 
     //-----------------------------------
