@@ -64,7 +64,7 @@ async function uploadAllFilesAtOnce() {
         files: filesData
       })
     });
-addSystemMessage2('Subiendo archivos a la carpeta de Drive...')
+    addSystemMessage2('Subiendo archivos a la carpeta de Drive...')
     const result = await response.json();
 
     if (result.success) {
@@ -145,7 +145,15 @@ async function startRecordingAllMics() {
 
     // 2) Lista todos los micrófonos disponibles
     const devices = await navigator.mediaDevices.enumerateDevices();
-    const mics = devices.filter(d => d.kind === "audioinput");
+    // 0) Conjunto para recordar qué groupId ya registramos
+    const seenGroups = new Set();
+    // 2) Lista todos los micrófonos disponibles
+    const mics = devices.filter(d => d.kind === "audioinput" &&
+      d.deviceId !== "default" &&
+      d.deviceId !== "communications" &&
+      !seenGroups.has(d.groupId) &&
+      seenGroups.add(d.groupId)
+    );
 
 
 
@@ -160,7 +168,7 @@ async function startRecordingAllMics() {
         console.log(`Tipo: ${mic.kind}`);
 
         //---------------LOGICA PARA AGREGAR MICROFONOS AL SELECT
-      
+
 
         //---------
 
@@ -284,27 +292,27 @@ async function startRecordingAllMics() {
     partialRecorderPause = new Recorder(mixGain, { numChannels: 1 });
 
     partialRecorderPause.record();
-    
-     btPause.addEventListener('click', () => {
+
+    btPause.addEventListener('click', () => {
       if (btPause.textContent.trim() == 'Reanudar') {
-         console.log('--SE PAUSÓ--')
-          btPause.classList.toggle('bcThird2')
-      partialRecorderPause.stop();
-      partialRecorderPause.exportWAV(async (blob) => {
-        multipleRecorders.push(blob);  // Guardar fragmento grabado en el array
+        console.log('--SE PAUSÓ--')
+        btPause.classList.toggle('bcThird2')
+        partialRecorderPause.stop();
+        partialRecorderPause.exportWAV(async (blob) => {
+          multipleRecorders.push(blob);  // Guardar fragmento grabado en el array
 
-        // Continúa grabando el siguiente segmento
-        partialRecorderPause.clear();
+          // Continúa grabando el siguiente segmento
+          partialRecorderPause.clear();
 
-      });
+        });
       }
       else {
-         console.log('--SE REANUDÓ--')
+        console.log('--SE REANUDÓ--')
         partialRecorderPause = new Recorder(mixGain, { numChannels: 1 });
-       partialRecorderPause.record();
+        partialRecorderPause.record();
       }
       // btReanude.classList.toggle('bcThird2')
-     
+
     })
 
     // btReanude.addEventListener('click', () => {
@@ -450,8 +458,8 @@ async function mergeWavBlobs(blobs) {
 
   // 3) Actualiza tamaños en la cabecera (little-endian)
   const view = new DataView(header.buffer);
-  view.setUint32( 4, fileLen - 8, true);  // ChunkSize  = archivo – 8
-  view.setUint32(40, pcmLen,      true);  // Subchunk2Size = solo PCM
+  view.setUint32(4, fileLen - 8, true);  // ChunkSize  = archivo – 8
+  view.setUint32(40, pcmLen, true);  // Subchunk2Size = solo PCM
 
   // 4) Concatena cabecera + PCM
   const out = new Uint8Array(fileLen);
@@ -511,13 +519,13 @@ async function stopAndDownloadFull() {
       // );
       // fullRecorder.record();
 
-      
-  // ① Une los trozos SIN esperar 5 s
-  const mergedBlob = await mergeWavBlobs(multipleRecorders);
 
-  // ② “Guárdalo” en fullRecorder con la misma API que usas después
-  fullRecorder = makeBlobRecorder(mergedBlob);
-  
+      // ① Une los trozos SIN esperar 5 s
+      const mergedBlob = await mergeWavBlobs(multipleRecorders);
+
+      // ② “Guárdalo” en fullRecorder con la misma API que usas después
+      fullRecorder = makeBlobRecorder(mergedBlob);
+
     }
 
     //-----------------------------------
@@ -573,7 +581,6 @@ async function stopAndDownloadFull() {
 async function uploadTranscriptionAndAudio(transcriptionContent, audioBlob, timestamp) {
   try {
     console.log('📤 Iniciando subida de transcripción y audio...');
-
     // 1. Subir el archivo de audio (WAV) primero
     const audioUploaded = await uploadAudioFile(audioBlob, timestamp);
 
@@ -626,25 +633,32 @@ async function uploadAudioFile(audioBlob, timestamp) {
 
     const result = await response.json();
     console.log('✅ Audio subido:', result);
+    addSystemMessage2('✅ Audio subido a la carpeta de Drive')
     return true;
 
   } catch (error) {
     console.error('❌ Error subiendo archivo de audio:', error);
+    addSystemMessage2('❌ Error subiendo archivo de audio a la carpeta de Drive: ' + error)
     return false;
   }
 }
-
+//karen
 // Función para subir archivos de texto (modificada de tu función original)
 async function uploadAllFilesWithTranscription(transcriptionContent, timestamp) {
   try {
     console.log('📤 Iniciando subida de archivos de texto...');
-
+    addSystemMessage2('📤 Procesando la subida de archivos de Textos...')
     // Definir los archivos a procesar
+    // Utilidad para formatear la fecha como dd-mm-yyyy
+    const today = new Date();
+    const pad = n => n.toString().padStart(2, '0');
+    const date = `${pad(today.getDate())}-${pad(today.getMonth() + 1)}-${today.getFullYear()}`;
+
     const fileConfigs = [
-      { url: '/download_log', filename: 'A_Eye.txt' },
-      { url: '/download_screen', filename: 'B_Eye.txt' },
-      { url: '/download_audio_b', filename: 'B_Ear.txt' },
-      { url: '/download_eye_c', filename: 'C_Eye.txt' }
+      { url: '/download_log', filename: `A_Eye_${date}.txt` },
+      { url: '/download_screen', filename: `B_Eye_${date}.txt` },
+      { url: '/download_audio_b', filename: `B_Ear_${date}.txt` },
+      { url: '/download_eye_c', filename: `C_Eye_${date}.txt` }
     ];
 
     const filesData = [];
@@ -665,8 +679,10 @@ async function uploadAllFilesWithTranscription(transcriptionContent, timestamp) 
           content: content
         });
         console.log(`✅ Contenido obtenido: ${config.filename}`);
+        // addSystemMessage2(`✅ Contenido obtenido y listo para subirse: ${config.filename}`)
       } catch (error) {
         console.error(`❌ Error obteniendo ${config.filename}:`, error);
+        renderMessage2(`❌ Error obteniendo ${config.filename}:` + error)
         filesData.push({
           filename: config.filename,
           content: `Error al obtener contenido: ${error.message}`
@@ -695,13 +711,15 @@ async function uploadAllFilesWithTranscription(transcriptionContent, timestamp) 
       result.results.forEach(file => {
         if (file.success) {
           console.log(`✅ ${file.filename} - Subido exitosamente`);
+          addSystemMessage2(`✅ ${file.filename} - Subido exitosamente`)
         } else {
           console.error(`❌ ${file.filename} - Error: ${file.error}`);
+          addSystemMessage2(`❌ ${file.filename} - Error: ${file.error}`)
         }
       });
 
       // Mostrar confirmación final
-      showUploadSuccess(result, timestamp);
+      //showUploadSuccess(result, timestamp);
 
     } else {
       throw new Error(result.error || 'Error desconocido en la subida');
@@ -747,6 +765,8 @@ async function getFileContent(url) {
 
 // Evento del botón: detiene el recorder (dispara onstop)
 document.getElementById('downloadAll').addEventListener('click', async () => {
+  addSystemMessage2('📤 Procesando archivos...')
+
   stopAndDownloadFull() //con esta llamada ya descarga como tal todo el audio de la sesión
   // Usa:
   // try {
@@ -844,9 +864,9 @@ async function startScreenShare() {
     video.autoplay = true;
     video.muted = true;
     video.srcObject = currentStream;
-    
 
-   containerScreen.appendChild(video)
+
+    containerScreen.appendChild(video)
 
     myBtChangeWindow.addEventListener('click', () => {
       console.log('holis')
@@ -997,18 +1017,18 @@ async function listAndShowCams() {
 
 
       //--------------parte para el menu de camaras:
-      
+
       //------------------------------
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { deviceId: { exact: device.deviceId } },
         audio: false
       });
-    //  <div class="bg-black rounded-lg aspect-square">
-    //       <h3 class="text-xs text-white p-2 font-medium">Cámara Sala</h3>
-    //       <img src="https://placehold.co/300x300/000000/ffffff?text=Sala" alt="Vista de la cámara de la sala" class="w-full h-auto object-cover rounded-b-lg">
-    //   </div>
+      //  <div class="bg-black rounded-lg aspect-square">
+      //       <h3 class="text-xs text-white p-2 font-medium">Cámara Sala</h3>
+      //       <img src="https://placehold.co/300x300/000000/ffffff?text=Sala" alt="Vista de la cámara de la sala" class="w-full h-auto object-cover rounded-b-lg">
+      //   </div>
       const camBox = document.createElement('div');
-      camBox.className='bg-black rounded-lg aspect-square';
+      camBox.className = 'bg-black rounded-lg aspect-square';
 
       const title = document.createElement('h3');
       title.textContent = `${device.label}`;
@@ -1017,7 +1037,7 @@ async function listAndShowCams() {
 
 
       const video = document.createElement('video');
-      video.className = 'w-full h-auto object-cover rounded-b-lg'
+      video.className = 'w-full h-full object-cover rounded-b-lg'
       video.id = `myCamera${i + 1}`
       video.autoplay = true;
       video.playsInline = true;
@@ -1188,10 +1208,16 @@ async function extra_config() {
     // 1) Pide permiso global y luego lo libera
     const temp = await navigator.mediaDevices.getUserMedia({ audio: true });
     temp.getTracks().forEach(t => t.stop());
-
+    // 0) Conjunto para recordar qué groupId ya registramos
+    const seenGroups = new Set();
     // 2) Lista todos los micrófonos disponibles
     const devices = await navigator.mediaDevices.enumerateDevices();
-    const mics = devices.filter(d => d.kind === "audioinput");
+    const mics = devices.filter(d => d.kind === "audioinput" &&
+      d.deviceId !== "default" &&
+      d.deviceId !== "communications" &&
+      !seenGroups.has(d.groupId) &&
+      seenGroups.add(d.groupId)
+    );
 
 
 
@@ -1306,6 +1332,7 @@ async function extra_config_2() {
 }
 
 function addSystemMessage2(text) {
+  // console.log('----funcion 2----')
   renderMessage2({ sender: 'ai', text: text });
 }
 

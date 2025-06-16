@@ -409,11 +409,11 @@
         
         btnStop.addEventListener('click', () => { updateMonitorUI('stop'); handleAction('stopMonitoring'); });
         
-        btnDownload.addEventListener('click', () => {
-            notification.classList.remove('hidden');
-            setTimeout(() => { notification.classList.add('hidden'); }, 3000);
-            addSystemMessage('Se ha generado y descargado el reporte de la sesión.');
-        });
+       // btnDownload.addEventListener('click', () => {
+          //  notification.classList.remove('hidden');
+          //  setTimeout(() => { notification.classList.add('hidden'); }, 3000);
+          //  addSystemMessage('Se ha generado y descargado el reporte de la sesión.');
+      //  });
 
         btnToggleChat.addEventListener('click', () => {
             chatbotPanel.classList.toggle('is-collapsed');
