@@ -442,10 +442,11 @@ async function startRecordingAllMics() {
     partialRecorder3.record();
 
     // 10) Cada 10 segundos corta el chunk y lo envía
+    //OIDOS B CADA 10 SEGUNDOS
     chunkTimer = setInterval(() => {
       //huhm
       if (myBoolean) {
-        console.log('Entró')
+        console.log('======OIDOS B======')
         partialRecorder2.stop();
         partialRecorder2.exportWAV(async (blob) => {
           const form = new FormData();
@@ -467,11 +468,12 @@ async function startRecordingAllMics() {
     }, 10_000);
 
     // 11) Transcripción a los 2 minutos (después de enviar el primer fragmento)
+    //OIDOS A CADA 3 MINUTOS
     setInterval(async () => {
       //huhm
       if (myBoolean) {
         // Detenemos la grabación después de 2 minutos
-        console.log("se entroooo---------------")
+        console.log("=======OIDOS A=======")
         partialRecorder.stop();
 
         // Enviar el primer segmento (0-2 minutos) para transcripción
@@ -505,11 +507,12 @@ async function startRecordingAllMics() {
 
 
     // 12) Transcripción a los 1 minutos (después de enviar el primer fragmento)
+
     setInterval(async () => {
       //huhm
       if (myBoolean) {
         // Detenemos la grabación después de 2 minutos
-        console.log("se entroooo a la primer llamada de resumen importate---------------")
+        console.log("=====CHECKLIST AUDIO====")
         partialRecorder3.stop();
 
         // Enviar el primer segmento (0-2 minutos) para transcripción
@@ -1045,6 +1048,7 @@ async function startScreenShare() {
       canvas.height = video.videoHeight;
     });
 
+    //OJOS B cada 10 segundos
     // Función para capturar frame actual del video y almacenarlo en currentFrame
     async function captureAndSendFrame() {
       if (video.videoWidth && video.videoHeight) {
@@ -1057,6 +1061,7 @@ async function startScreenShare() {
 
         //huhm
         try {
+            console.log('======OJOS B=====');
 
           const response = await fetch('/upload_frame', {
             method: 'POST',
@@ -1069,7 +1074,7 @@ async function startScreenShare() {
           if (!response.ok) {
             console.error('Error enviando frame al servidor');
           } else {
-            console.log('Frame enviado con éxito');
+            console.log('Frame enviado con éxito:' , response.json());
           }
         } catch (error) {
           console.error('Error en fetch:', error);
@@ -1078,9 +1083,11 @@ async function startScreenShare() {
 
       }
     }
-
+  //Checklit con imagen cada 1.5 minutos
     async function captureAndSendFrame2() {
       if (video.videoWidth && video.videoHeight) {
+        console.log('======Cheklist Imagen======');
+
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -1307,6 +1314,7 @@ async function listAndShowCams() {
   // Función para capturar y enviar frames
   async function captureAndSendFrames() {
 
+    console.log('=====OJOS A y OJOS C======');
 
     activeCams.forEach(async ({ video, canvas, deviceId }, index) => {
       if (video.readyState >= 2) { // HAVE_CURRENT_DATA

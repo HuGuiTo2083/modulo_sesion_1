@@ -1627,7 +1627,7 @@ def transcribe_audio():
     input_bytes = audio_file.read()
 
     # Función para reducir el tamaño del WAV en memoria
-    def reduce_wav_size_bytes(input_bytes: bytes, target_rate: int = 13000, target_swidth: int = 2) -> bytes:
+    def reduce_wav_size_bytes(input_bytes: bytes, target_rate: int = 16000, target_swidth: int = 2) -> bytes:
         with wave.open(io.BytesIO(input_bytes), 'rb') as wf:
             nchan, swidth, rate, nframes, comptype, compname = wf.getparams()
             audio_data = wf.readframes(nframes)
