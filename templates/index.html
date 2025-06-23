@@ -235,7 +235,7 @@
                 <div class="flex items-center gap-2">
                     <button id="btChangeWindow" class="control-btn active cPointer" aria-label="Cambiar Pestaña">
                         <!-- <img src="{{ url_for('static', filename='icons/change_window.png') }}"> -->
-                         
+                        <img src="../static/icons/change_window_black.png">
                     </button>
 
                 </div>
@@ -254,7 +254,7 @@
                 <div class="w-1/4 bg-white rounded-lg shadow-md flex flex-col min-h-0">
                     <h3 class="font-serif text-xl p-4 border-b border-slate-200 text-mc-blue-dark flex-shrink-0">
                         Interacción y Carga</h3>
-                    <div class="chat-window flex-grow p-4 overflow-y-auto" id="chat-window">
+                    <div class="chat-window flex-grow p-4 overflow-y-auto max-h-screen gap-4 flex flex-col" id="chat-window">
                         <div id="user-message-container" class="space-y-4"></div>
                     </div>
                     <footer class="flex-shrink-0 p-4 border-t border-slate-200">
@@ -285,7 +285,7 @@
                 <div class="w-3/4 bg-white rounded-lg shadow-md flex flex-col min-h-0">
                     <h3 class="font-serif text-xl p-4 border-b border-slate-200 text-mc-blue-dark flex-shrink-0">
                         Análisis del Sistema</h3>
-                    <div id="message-container" class="chat-window flex-grow p-4 overflow-y-auto space-y-3">
+                    <div id="message-container" class="chat-window flex-grow p-4 overflow-y-auto max-h-screen space-y-3 scroll-smooth">
 
                     </div>
                 </div>
@@ -300,16 +300,12 @@
                             <video id="myDivScreen" class="w-full h-full mx-auto block rounded-lg"></video>
                         </div>
                     </div>
-                    <div class="bg-black rounded-lg relative aspect-video">
+                    <div class="bg-black rounded-lg relative aspect-video" id="test-camera">
                         <h4 class="absolute top-1 left-2 text-xs text-white p-1 font-medium bg-black/30 rounded">Cámara
                             1</h4><img src="https://placehold.co/600x338/000000/ffffff?text=Cámara+1"
                             class="w-full h-full object-cover rounded-lg">
                     </div>
-                    <div class="bg-black rounded-lg relative aspect-video">
-                        <h4 class="absolute top-1 left-2 text-xs text-white p-1 font-medium bg-black/30 rounded">Cámara
-                            2</h4><img src="https://placehold.co/600x338/000000/ffffff?text=Cámara+2"
-                            class="w-full h-full object-cover rounded-lg">
-                    </div>
+                  
                 </div>
             </div>
         </main>
@@ -350,6 +346,84 @@
         let conversationFlow;
         let audioSimulationInterval = null;
 
+      //  ------DARLE VIDA AL APARTADO DE SUBIR ARCHIVOS ------
+// Array global para almacenar archivos
+let uploadedFiles = [];
+      const fileInput = document.getElementById('file-upload');
+
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+      
+        
+        
+  
+       
+        // Mostrar mensaje
+        renderMessage3({
+          sender: 'user',
+          text: `📎 Adjuntaste: ${file.name}`
+        });
+      
+        // Si es imagen, mostrar miniatura
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            renderMessage3({
+              sender: 'user',
+              html: `<img src="${e.target.result}" class="max-w-48 rounded-lg" alt="${file.name}">`
+            });
+          };
+          reader.readAsDataURL(file);
+         
+        }
+        else{
+              // Leer el contenido del archivo
+             const reader = new FileReader();
+             reader.onload = async (e) => {
+            //console.log(e.target.result); // Aquí está el contenido
+            // Almacenar el archivo en el array
+               uploadedFiles.push(e.target.result);
+
+    try {
+        // Hacer fetch
+        const response = await fetch('/generate_checklist', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+          file_content: e.target.result,
+            
+          })
+        });
+        
+        const data = await response.json();
+        
+        // Variables para manejar la respuesta
+        const checklist = data.checklist;
+        
+        
+        // Imprimir las variables
+        //console.log('Checklist generado:', checklist);
+        console.log('Respuesta completa:', data);
+        if (data && data.checklist) {
+            console.log('Checklist generado:', data.checklist);
+            MY_CHECKLIST = data.checklist
+            renderMessage4(data.checklist);
+        } else {
+            console.error('No se recibió checklist:', data);
+        }
+        
+      } catch (error) {
+        console.error('Error al generar checklist:', error);
+      }
+             };
+             reader.readAsText(file); // Para archivos de texto
+
+
+        }
+      });
 
         // --- LÓGICA DEL CHATBOT Y ASISTENTE ---
         const initialFlow = [
@@ -375,45 +449,200 @@
              renderMessage({ sender: 'ai', text: text });
         }
 
-        function renderMessage(message) {
+        function addSystemMessage3(text) {
+            renderMessage3({ sender: 'ai', text: text });
+       }
 
+        function renderMessage(message) {
+            // --- contenedor externo (alineación) -------------------------------
             const wrapper = document.createElement('div');
-            wrapper.className = `flex items-start gap-3 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`;
-            
+            wrapper.className = `flex items-start gap-3 ${
+              message.sender === 'user' ? 'justify-end' : 'justify-start'
+            }`;
+          
+            // --- “burbuja” de chat --------------------------------------------
             const bubble = document.createElement('div');
-            bubble.className = `max-w-xs p-3 rounded-lg text-sm ${message.sender === 'user' ? 'bg-mc-blue-dark text-white' : 'bg-chat-light text-mc-blue-dark border border-gray-200'}`;
-            
-            if (message.isCheck) {
-                bubble.innerHTML = `<div id="${message.checkId}" class="flex items-center gap-2"><svg class="animate-spin h-5 w-5 text-mc-yellow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>${message.text}</span></div>`;
+            bubble.className =
+              `max-w-xs p-3 rounded-lg text-sm ` +
+              (message.sender === 'user'
+                ? 'bg-mc-blue-dark text-white'
+                : 'bg-chat-light text-mc-blue-dark border border-gray-200');
+          
+            // --- contenido de la burbuja --------------------------------------
+            if (message.html) {
+              // 1) Se pasa HTML completo (ideal para imágenes, video, etc.)
+              bubble.innerHTML = message.html;
+          
+            } else if (message.isCheck) {
+              // 2) Estado “cargando…”
+              bubble.innerHTML = `
+                <div id="${message.checkId}" class="flex items-center gap-2">
+                  <svg class="animate-spin h-5 w-5 text-mc-yellow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <path class="opacity-75" fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>${message.text}</span>
+                </div>`;
             } else {
-                 bubble.innerHTML = `<p>${message.text}</p>`;
+              // 3) Texto simple
+              bubble.innerHTML = `<p>${message.text}</p>`;
             }
-            
+          
+            // --- botones de opciones (si los hay) -----------------------------
             if (message.options) {
-                const optionsContainer = document.createElement('div');
-                optionsContainer.className = 'mt-3 flex flex-wrap gap-2';
-                message.options.forEach(opt => {
-                    const button = document.createElement('button');
-                    button.textContent = opt.text;
-                    button.className = 'bg-transparent border border-mc-yellow text-mc-yellow font-semibold py-1 px-3 rounded-md text-sm hover:bg-mc-yellow hover:text-black transition-all';
-                    button.onclick = () => {
-                        handleAction(opt.action);
-                        optionsContainer.querySelectorAll('button').forEach(btn => {
-                           btn.disabled = true;
-                           btn.classList.add('opacity-50');
-                        });
-                    };
-                    optionsContainer.appendChild(button);
-                });
-                bubble.appendChild(optionsContainer);
+              const optionsContainer = document.createElement('div');
+              optionsContainer.className = 'mt-3 flex flex-wrap gap-2';
+          
+              message.options.forEach(opt => {
+                const button = document.createElement('button');
+                button.textContent = opt.text;
+                button.className =
+                  'bg-transparent border border-mc-yellow text-mc-yellow font-semibold py-1 px-3 ' +
+                  'rounded-md text-sm hover:bg-mc-yellow hover:text-black transition-all';
+                button.onclick = () => {
+                  handleAction(opt.action);
+                  optionsContainer.querySelectorAll('button').forEach(btn => {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50');
+                  });
+                };
+                optionsContainer.appendChild(button);
+              });
+          
+              bubble.appendChild(optionsContainer);
             }
-            
+          
+            // --- insertar en DOM y hacer scroll -------------------------------
             wrapper.appendChild(bubble);
             messageContainer.appendChild(wrapper);
             chatWindow.scrollTop = chatWindow.scrollHeight;
+          }
+          
+        
+          async function processConversation() {
+            for (const message of conversationFlow) {
+                await new Promise(resolve => setTimeout(resolve, message.sender === 'ai' ? 800 : 100));
+                renderMessage(message);
+
+                if(message.isCheck) {
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    const checkDiv = document.getElementById(message.checkId);
+                    checkDiv.innerHTML = `<svg class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg><span>${message.text.replace('Verificando', 'Verificado:')}</span>`;
+                    
+                    if (message.checkId === 'perm-check') handleAction('permissionSuccess');
+                    if (message.checkId === 'media-check') handleAction('mediaSuccess');
+                }
+            }
         }
 
-        async function processConversation() {
+
+        function renderMessage4(message) {
+            // --- contenedor externo (alineación) -------------------------------
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex items-start gap-3  justify-start
+            `;
+          
+            // --- “burbuja” de chat --------------------------------------------
+            const bubble = document.createElement('div');
+            bubble.className =
+              `max-w-xs p-3 rounded-lg text-sm bg-chat-light text-mc-blue-dark border border-gray-200`
+          
+            
+              // 3) Texto simple
+              bubble.innerHTML = `${message}`;
+            
+          
+           
+            // --- insertar en DOM y hacer scroll -------------------------------
+            wrapper.appendChild(bubble);
+            document.getElementById('chat-window').appendChild(wrapper);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+          }
+          
+        
+          async function processConversation() {
+            for (const message of conversationFlow) {
+                await new Promise(resolve => setTimeout(resolve, message.sender === 'ai' ? 800 : 100));
+                renderMessage(message);
+
+                if(message.isCheck) {
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    const checkDiv = document.getElementById(message.checkId);
+                    checkDiv.innerHTML = `<svg class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg><span>${message.text.replace('Verificando', 'Verificado:')}</span>`;
+                    
+                    if (message.checkId === 'perm-check') handleAction('permissionSuccess');
+                    if (message.checkId === 'media-check') handleAction('mediaSuccess');
+                }
+            }
+        }
+
+        function renderMessage3(message) {
+            // --- contenedor externo (alineación) -------------------------------
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex items-start gap-3 ${
+              message.sender === 'user' ? 'justify-end' : 'justify-start'
+            }`;
+          
+            // --- “burbuja” de chat --------------------------------------------
+            const bubble = document.createElement('div');
+            bubble.className =
+              `max-w-xs p-3 rounded-lg text-sm ` +
+              (message.sender === 'user'
+                ? 'bg-mc-blue-dark text-white'
+                : 'bg-chat-light text-mc-blue-dark border border-gray-200');
+          
+            // --- contenido de la burbuja --------------------------------------
+            if (message.html) {
+              // 1) Se pasa HTML completo (ideal para imágenes, video, etc.)
+              bubble.innerHTML = message.html;
+          
+            } else if (message.isCheck) {
+              // 2) Estado “cargando…”
+              bubble.innerHTML = `
+                <div id="${message.checkId}" class="flex items-center gap-2">
+                  <svg class="animate-spin h-5 w-5 text-mc-yellow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <path class="opacity-75" fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>${message.text}</span>
+                </div>`;
+            } else {
+              // 3) Texto simple
+              bubble.innerHTML = `<p>${message.text}</p>`;
+            }
+          
+            // --- botones de opciones (si los hay) -----------------------------
+            if (message.options) {
+              const optionsContainer = document.createElement('div');
+              optionsContainer.className = 'mt-3 flex flex-wrap gap-2';
+          
+              message.options.forEach(opt => {
+                const button = document.createElement('button');
+                button.textContent = opt.text;
+                button.className =
+                  'bg-transparent border border-mc-yellow text-mc-yellow font-semibold py-1 px-3 ' +
+                  'rounded-md text-sm hover:bg-mc-yellow hover:text-black transition-all';
+                button.onclick = () => {
+                  handleAction(opt.action);
+                  optionsContainer.querySelectorAll('button').forEach(btn => {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50');
+                  });
+                };
+                optionsContainer.appendChild(button);
+              });
+          
+              bubble.appendChild(optionsContainer);
+            }
+          
+            // --- insertar en DOM y hacer scroll -------------------------------
+            wrapper.appendChild(bubble);
+            document.getElementById('chat-window').appendChild(wrapper);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+          }
+          
+        
+          async function processConversation() {
             for (const message of conversationFlow) {
                 await new Promise(resolve => setTimeout(resolve, message.sender === 'ai' ? 800 : 100));
                 renderMessage(message);
@@ -444,7 +673,7 @@
         sendBtn.addEventListener('click', () => {
             const text = userInput.value.trim();
             if (!text) return;
-            renderMessage({ sender: 'user', text });
+            renderMessage3({ sender: 'user', text });
             userInput.value = '';
         });
         userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendBtn.click(); });
@@ -606,6 +835,7 @@
         }
 
         initialize();
+        //test_console('hola')
     </script>
 </body>
 

@@ -800,6 +800,8 @@ import re
 #OPENROUTER_API_KEY = "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"
 #OPENROUTER_API_KEY = "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"
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_API_KEY_2 = os.getenv("OPENROUTER_API_KEY_2")
+
 DEEPSEEK_MODEL = "deepseek/deepseek-r1:free"
 
 
@@ -1189,7 +1191,7 @@ Recuerda: Tu objetivo es ser los "ojos inteligentes" del usuario, capturando rá
         #print(payload)
 
         headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Authorization": f"Bearer {OPENROUTER_API_KEY_2}",
             "HTTP-Referer": "https://openrouter.ai/api/v1",
             "Content-Type": "application/json"
         }
@@ -1229,7 +1231,7 @@ Recuerda: Tu objetivo es ser los "ojos inteligentes" del usuario, capturando rá
 
 
 
-def analyze_resume(info):
+def analyze_resume(info, checklist):
    
 
     try:
@@ -1237,28 +1239,142 @@ def analyze_resume(info):
        
         myInfo = info
         SYSTEM_PROMPT = """
-Eres un asistente especializado en generar resúmenes importantes de reuniones y conversaciones. Tu tarea es analizar el contenido proporcionado y crear un resumen conciso que capture los puntos más relevantes, similar a los resúmenes automáticos de Google Meet.
+Eres un asistente especializado en seguimiento de reuniones.  
+Se te proporcionarán dos bloques de información:
 
-INSTRUCCIONES:
-1. Identifica los temas principales discutidos
-2. Destaca decisiones importantes tomadas
-3. Menciona tareas o acciones asignadas
-4. Resalta problemas identificados y sus soluciones propuestas
-5. Incluye fechas, números o datos específicos mencionados
-6. Mantén un tono profesional y objetivo
+1. **Checklist inicial** ─ lista numerada de puntos, tareas o compromisos acordados al inicio de la sesión.  
+2. **Registro de la sesión** ─ transcripción, minutas o notas donde se describe lo tratado durante la reunión.
 
-FORMATO DE RESPUESTA:
-- Usa frases claras y directas
-- Comienza cada punto importante con el nombre de la persona (si se menciona) o "Se discutió", "Se presentó", etc.
-- Prioriza información accionable
-- Mantén el resumen entre 100-300 palabras
-- Usa viñetas o párrafos cortos para mejor legibilidad
+**TAREA PRINCIPAL**  
+Compara cada ítem del Checklist inicial contra la información del Registro de la sesión y determina su estado:
 
-EJEMPLO DE SALIDA:
-"Juan explicó los errores principales en el proceso de facturación, identificando 3 problemas críticos. María propuso implementar un nuevo sistema de validación para el próximo trimestre. Se decidió programar una reunión de seguimiento para el viernes 15. El equipo acordó revisar el presupuesto antes de la implementación."
+- **Cumplido**: el registro indica claramente que el punto se completó, cerró o quedó resuelto.  
+- **Pendiente**: no hay evidencia suficiente de cumplimiento en el registro.
 
-Analiza el siguiente contenido y genera un resumen importante:
+**SALIDA REQUERIDA**  
+Devuelve **solo** los ítems pendientes en el mismo orden en que aparecen en el Checklist inicial.
+
+**FORMATO ESTRICTO (HTML)**  
+- Devuelve **exclusivamente** código HTML válido.  
+- Encabezado obligatorio: `<p><strong>Puntos faltantes:</strong></p>` (sin texto adicional).  
+- A continuación, presenta los ítems pendientes dentro de una lista sin ordenar `<ul>`; cada punto debe ir en su propio `<li>`.  
+- Mantén la redacción original de cada ítem (puedes acortarla si es excesivamente larga, conservando la esencia).  
+- No incluyas comentarios, `<!DOCTYPE>`, encabezados de nivel `<h1>–<h6>`, marcas de tiempo ni conclusiones extra.
+
+**EJEMPLO DE SALIDA**
+
+```html
+<p><strong>Puntos faltantes:</strong></p>
+<ul>
+  <li>Actualizar parámetros de soplado y validar con 3 lotes piloto</li>
+  <li>Certificar segunda fuente de resina PET-HF</li>
+  <li>Integrar visión artificial 360° en la celda de inspección</li>
+</ul>
 """
+
+
+
+        # Construimos el prompt (texto) que quieres analizar
+        text_prompt = f"""
+          Analiza esta informacion y completa el analisis en el formato que se te indicó. informacion de sesion hasta ahora: {myInfo} , checklist: {checklist}
+        """
+
+        # Ahora armamos un payload usando "messages" con "text" e "image_url".
+        # Supuestamente, el modelo "meta-llama/llama-4-maverick:free" aceptaría imagen_url.
+        payload = {
+            "model": "meta-llama/llama-4-maverick:free",  # <--- supuesta "Llama 4 Maverick"
+            "messages": [
+                  {"role": "system", "content": SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": text_prompt
+                        }
+                    ]
+                }
+            ],
+            "max_tokens": 500,
+            "temperature": 0.1
+        }
+
+        #print("[DEBUG] Payload que envío a la IA:")
+        #print(payload)
+
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY_2}",
+            "HTTP-Referer": "https://openrouter.ai/api/v1",
+            "Content-Type": "application/json"
+        }
+
+        # Paso 3) Llamar a la API de OpenRouter
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=15
+        )
+
+        # Eliminar archivo temporal
+
+        # Procesar respuesta
+        if response.status_code == 200:
+            data = response.json()
+            #print("[DEBUG] response.json() completo:", data)
+            # Podríamos analizar "choices", "message", etc.
+            if "choices" in data and len(data["choices"]) > 0:
+                content = data["choices"][0]["message"]["content"]
+                # myStr = f"\n------------[Ventana] - {datetime.now()} --------------------\n"
+                # print(str(myStr))
+                #  print(f"Título detectado: {main_title}")
+                 # 4.4 Análisis con IA
+                
+                print("*****************************[DEBUG] Respuesta Final de Resumen:\n", content)
+                return content
+            else:
+                return "Error: no hay 'choices' en la respuesta."
+        else:
+            return f"Error API: {response.status_code} - {response.text}"
+
+    except Exception as e:
+        traceback.print_exc()
+        return f"Error análisis IA: {str(e)}"
+
+
+
+
+def get_checklist(info):
+   
+
+    try:
+       
+       
+        myInfo = info
+        SYSTEM_PROMPT = """
+Eres un asistente experto en gestión de la calidad y facilitación de reuniones. Se te proporcionará una Ficha Contextual con información detallada de la empresa, el proceso de calidad a revisar y los objetivos de la sesión.
+
+Tarea principal: A partir exclusivamente de los datos que aparezcan en la ficha contextual, elabora una Agenda de Reunión numerada en orden secuencial (1, 2, 3, …) sin omitir ni reordenar números.
+
+Contenido de cada punto:
+- Título del punto — breve (máx. 10 palabras)
+- Objetivo del punto — una frase concisa que explique por qué se incluye
+
+Restricciones y estilo:
+- Usa únicamente la información de la ficha contextual; no inventes datos.
+- Respeta la terminología exactamente como aparezca.
+- Sé claro, ordenado y profesional; no agregues explicaciones fuera de la agenda.
+
+Formato de salida requerido:
+- Devuelve exclusivamente código HTML válido.
+- Estructura la agenda en una lista ordenada (<ol>). Cada ítem (<li>) debe contener los dos elementos descritos, presentados en líneas separadas mediante etiquetas <br>.
+- El “Título” deberá ir en negritas utilizando <strong>.
+- Incluye un <br> adicional al final de cada <li> para una mejor separación visual.
+- No añadas encabezados, comentarios, DOCTYPE ni texto fuera de las etiquetas HTML.
+"""
+
+
+
 
         # Construimos el prompt (texto) que quieres analizar
         text_prompt = f"""
@@ -1289,7 +1405,7 @@ Analiza el siguiente contenido y genera un resumen importante:
         #print(payload)
 
         headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Authorization": f"Bearer {OPENROUTER_API_KEY_2}",
             "HTTP-Referer": "https://openrouter.ai/api/v1",
             "Content-Type": "application/json"
         }
@@ -1561,12 +1677,14 @@ def transcribe_audio():
         app.logger.error(f"Error en Whisper: {e}")
         return jsonify({"error": str(e)}), 500
 
+myChecklist = ''
+    
 
 myIndex_Resume = 0
 myBufferImportant = []
 @app.route('/resume', methods=['POST'])
 def resume_important():
-    global myIndex_Resume, myBufferImportant
+    global myIndex_Resume, myBufferImportant, myChecklist
     # Extraer el status del FormData
     # status = request.form.get('status')
     status = int(request.form.get('status', 0))
@@ -1706,7 +1824,7 @@ def resume_important():
                 # Análisis final
                 try:
                     print("Iniciando análisis final del resumen...")
-                    content_final = analyze_resume(texto_completo)
+                    content_final = analyze_resume(texto_completo, myChecklist)
                     print("✓ Análisis final completado")
                     print("Longitud del contenido final:", len(str(content_final)) if content_final else "None")
 
@@ -1733,8 +1851,21 @@ def resume_important():
             traceback.print_exc()
             return jsonify({'status': 'error', 'message': 'Error interno del servidor: ' + str(e)}), 500
 
-    
-
+@app.route('/generate_checklist', methods=['POST'])
+def gen_check():
+    global myChecklist
+    data = request.get_json()
+    print("Data recibida:", data)  # Debug
+    data_file = data.get('file_content')  # Corregido
+    print("File content:", data_file) 
+    myInfo = get_checklist(data_file)
+    myChecklist = myInfo
+       # Retornar como JSON
+    return jsonify({
+        'status': 'success',
+        'checklist': myInfo,
+        'message': 'Checklist generado correctamente'
+    })
 
 
 

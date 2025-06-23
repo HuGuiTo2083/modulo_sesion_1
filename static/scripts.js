@@ -1,12 +1,18 @@
 // Función para subir todos los archivos de una vez
-
+let entregables = {
+  archivosGenerados: 0,
+  names: [],
+  erroresGeneracion: [],
+  errorDetails: []
+};
 // Función para obtener contenido de un archivo
 // async function getFileContent(url) {
 //   const resp = await fetch(url);
 //   if (!resp.ok) throw new Error(`Erro8r ${resp.status} al obtener ${url}`);
 //   return await resp.text();
 // }
-
+let MY_STATUS_SYSTEM = ''
+let MY_CHECKLIST = ''
 const btReanude = document.getElementById('btReanude')
 const btPause = document.getElementById('btPause')
 const btChangeWindow = document.getElementById('btChangeWindow')
@@ -132,6 +138,7 @@ let chunkTimer;
 let mainTranscription
 let multipleRecorders = []
 let partialRecorderPause;
+let transcrip 
 // 1) Arranca ambos recorders
 
 async function startRecordingAllMics() {
@@ -410,6 +417,7 @@ async function startRecordingAllMics() {
           });
           const { transcription } = await res.json();
           console.log('Resumen Importante Recibido - transcripcion:', transcription);
+          transcrip += `-- ------\n${transcription}\n\n`;
           const now = new Date();
           // Opción A: hora local, formato HH:MM:SS
           // const timeStr = now.toLocaleTimeString(); 
@@ -443,6 +451,7 @@ async function startRecordingAllMics() {
 // -------------------------------------------------
 
 // 2) Para todo y descarga el WAV completo
+
 // Une varios blobs WAV → 1 solo blob WAV (sin cabeceras duplicadas)
 async function mergeWavBlobs(blobs) {
   // 1) Carga cada blob en memoria
@@ -710,14 +719,25 @@ async function uploadAllFilesWithTranscription(transcriptionContent, timestamp) 
       // Mostrar detalles
       result.results.forEach(file => {
         if (file.success) {
+          entregables.archivosGenerados++
+          entregables.names.push(file.filename)
           console.log(`✅ ${file.filename} - Subido exitosamente`);
           addSystemMessage2(`✅ ${file.filename} - Subido exitosamente`)
         } else {
           console.error(`❌ ${file.filename} - Error: ${file.error}`);
           addSystemMessage2(`❌ ${file.filename} - Error: ${file.error}`)
+          entregables.erroresGeneracion.push(file.filename)
+          entregables.errorDetails.push(file.error)
         }
       });
 
+      MY_STATUS_SYSTEM += '--- ESTADO DE ENTREGABLES ---\n';
+      MY_STATUS_SYSTEM += `\n Exitosos: ${entregables.archivosGenerados} (${entregables.names.join(', ')})\n`
+      MY_STATUS_SYSTEM += ` Fallidos: ${entregables.erroresGeneracion.length} (${entregables.erroresGeneracion.join(', ')}) \n`
+
+      MY_STATUS_SYSTEM += '\n--- REGISTRO DE ERRORES ---\n';
+      MY_STATUS_SYSTEM += `\n  (${entregables.errorDetails.join('\n\n')})`
+      downloadStatus()
       // Mostrar confirmación final
       //showUploadSuccess(result, timestamp);
 
@@ -729,6 +749,28 @@ async function uploadAllFilesWithTranscription(transcriptionContent, timestamp) 
     console.error('❌ Error en subida de archivos:', error);
     alert('Hubo un error al subir los archivos: ' + error.message);
   }
+}
+
+function downloadStatus(){
+ // 1. Crear un blob de tipo texto
+ const blob = new Blob([MY_STATUS_SYSTEM], { type: 'text/plain;charset=utf-8' });
+
+ // 2. Generar una URL temporal para ese blob
+ const url = URL.createObjectURL(blob);
+
+ // 3. Crear (o reutilizar) un enlace oculto con el atributo download
+ const link = document.createElement('a');
+ link.href = url;
+ link.download = 'status.txt';          // nombre del archivo
+ document.body.appendChild(link);       // requerido en Firefox
+
+ // 4. Simular clic para iniciar la descarga
+ link.click();
+
+ // 5. Limpieza
+ document.body.removeChild(link);       // opcional: quitar el enlace
+ URL.revokeObjectURL(url);              // liberar la URL temporal
+
 }
 
 // Función para mostrar éxito de subida
@@ -930,11 +972,12 @@ async function startScreenShare() {
         // Convertir canvas a blob en lugar de string base64
         canvas.toBlob(async (blob) => {
           try {
+            console.log('contenido del checklist para su analisis: ', MY_CHECKLIST)
             console.log('ejecutando fetch 2...')
             const form = new FormData();
             form.append("img", blob, "image.png"); // Enviar como blob, no como string base64
             form.append("status", "2"); // Enviar como string para estar seguro
-
+            form.append("checklist", MY_CHECKLIST)
             const response = await fetch('/resume', {
               method: 'POST',
               body: form
@@ -952,13 +995,14 @@ async function startScreenShare() {
               // Leer el contenido JSON de la respuesta
               const data = await response.json();
               console.log('Frame enviado con éxito');
-              console.log('Contenido completo:', data);
+             // console.log('Contenido completo:', data);
               console.log('Resultado del análisis - RESUMEN:', data.result);
-              const divImportant = document.getElementById('divImportant')
-              const newDiv = document.createElement('div')
-              newDiv.className = 'w90  fShrink0 hAuto taCenter dFlex aiCenter jcCenter bsBorderBox p10 bcThirdLight ff2 fs1 br5px'
-              newDiv.textContent = `${horaActual} - ${data.result}`
-              divImportant.appendChild(newDiv)
+              renderMessage5(data.result)
+              // const divImportant = document.getElementById('divImportant')
+              // const newDiv = document.createElement('div')
+              // newDiv.className = 'w90  fShrink0 hAuto taCenter dFlex aiCenter jcCenter bsBorderBox p10 bcThirdLight ff2 fs1 br5px'
+              // newDiv.textContent = `${horaActual} - ${data.result}`
+              // divImportant.appendChild(newDiv)
             }
 
             // Resto de tu código...
@@ -1003,7 +1047,8 @@ async function listAndShowCams() {
 
   const devices = await navigator.mediaDevices.enumerateDevices();
   const videoInputs = devices.filter(device => device.kind === 'videoinput');
-  camsContainer.innerHTML = '';
+  ;const test_camera = document.getElementById('test-camera')
+  test_camera.style.display='none'
   console.log('cams: ' + videoInputs)
   // Array para almacenar objetos con video y canvas para cada cámara
   const activeCams = [];
@@ -1028,16 +1073,16 @@ async function listAndShowCams() {
       //       <img src="https://placehold.co/300x300/000000/ffffff?text=Sala" alt="Vista de la cámara de la sala" class="w-full h-auto object-cover rounded-b-lg">
       //   </div>
       const camBox = document.createElement('div');
-      camBox.className = 'bg-black rounded-lg aspect-square';
+      camBox.className = 'bg-black rounded-lg relative aspect-video';
 
       const title = document.createElement('h3');
       title.textContent = `${device.label}`;
-      title.className = 'text-xs text-white p-2 font-medium'
+      title.className = 'absolute top-1 left-2 text-xs text-white p-1 font-medium bg-black/30 rounded'
       camBox.appendChild(title);
 
 
       const video = document.createElement('video');
-      video.className = 'w-full h-full object-cover rounded-b-lg'
+      video.className = 'w-full h-full object-cover rounded-lg'
       video.id = `myCamera${i + 1}`
       video.autoplay = true;
       video.playsInline = true;
@@ -1205,6 +1250,9 @@ myStartBt.addEventListener('click', () => {
 async function extra_config() {
   console.log('-----------------1--------------------')
   try {
+    MY_STATUS_SYSTEM += '\n--- DIAGNÓSTICO DE HARDWARE ---\n';
+    MY_STATUS_SYSTEM += '\n--- Dispositivos de audio detectados: ---\n';
+
     // 1) Pide permiso global y luego lo libera
     const temp = await navigator.mediaDevices.getUserMedia({ audio: true });
     temp.getTracks().forEach(t => t.stop());
@@ -1238,6 +1286,7 @@ async function extra_config() {
         option.id = `myAudio${index + 1}`
         const mySpan = document.createElement('span')
         mySpan.innerHTML = mic.label
+        MY_STATUS_SYSTEM += `${mic.label} \n`
 
         option.appendChild(mySpan)
 
@@ -1274,6 +1323,7 @@ async function extra_config() {
 async function extra_config_2() {
 
   console.log('-----------------2--------------------')
+  MY_STATUS_SYSTEM += '\n--- Dispositivos de audio detectados: ---\n';
 
   try {
     await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -1306,6 +1356,8 @@ async function extra_config_2() {
 
       const mySpan = document.createElement('span')
       mySpan.innerHTML = device.label
+
+      MY_STATUS_SYSTEM += `${device.label} \n`
 
       const mySpan2 = document.createElement('span')
       mySpan2.className = 'h-2 w-2 rounded-full bg-green-500'
@@ -1375,7 +1427,100 @@ function renderMessage2(message) {
   chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
+function renderMessage5(message) {
+  // --- contenedor externo (alineación) -------------------------------
+  const wrapper = document.createElement('div');
+  wrapper.className = `flex items-start gap-3  justify-start
+  `;
+
+  // --- “burbuja” de chat --------------------------------------------
+  const bubble = document.createElement('div');
+  bubble.className =
+    `max-w-xs p-3 rounded-lg text-sm bg-chat-light text-mc-blue-dark border border-gray-200`
+
+  
+    // 3) Texto simple
+    bubble.innerHTML = `${message}`;
+  
+
+ 
+  // --- insertar en DOM y hacer scroll -------------------------------
+  wrapper.appendChild(bubble);
+  document.getElementById('chat-window').appendChild(wrapper);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+// Función para generar y concatenar el reporte básico
+function generateStatusReport() {
+  const now = new Date();
+  
+  // Obtener información básica del sistema
+  const systemInfo = {
+      timestamp: now.toISOString(),
+      fecha: now.toLocaleDateString('es-MX'),
+      hora: now.toLocaleTimeString('es-MX'),
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      language: navigator.language,
+      cookiesEnabled: navigator.cookieEnabled,
+      onlineStatus: navigator.onLine ? 'Conectado' : 'Sin conexión'
+  };
+
+  // Información de la ventana/pantalla
+  const displayInfo = {
+      screenWidth: screen.width,
+      screenHeight: screen.height,
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
+      colorDepth: screen.colorDepth,
+      pixelRatio: window.devicePixelRatio
+  };
+
+  // Generar el contenido del reporte
+  let reportContent = '';
+  
+  reportContent += '='.repeat(60) + '\n';
+  reportContent += '           REPORTE DE ESTADO DEL SISTEMA\n';
+  reportContent += '='.repeat(60) + '\n';
+  reportContent += `Generado: ${systemInfo.fecha} a las ${systemInfo.hora}\n`;
+  reportContent += `Timestamp: ${systemInfo.timestamp}\n\n`;
+  
+  reportContent += '--- INFORMACIÓN DEL SISTEMA ---\n';
+  reportContent += `Estado de conexión: ${systemInfo.onlineStatus}\n`;
+  reportContent += `Idioma del navegador: ${systemInfo.language}\n`;
+  reportContent += `Plataforma: ${systemInfo.platform}\n`;
+  reportContent += `Cookies habilitadas: ${systemInfo.cookiesEnabled ? 'Sí' : 'No'}\n`;
+  reportContent += `User Agent: ${systemInfo.userAgent}\n\n`;
+  
+  reportContent += '--- INFORMACIÓN DE PANTALLA ---\n';
+  reportContent += `Resolución de pantalla: ${displayInfo.screenWidth}x${displayInfo.screenHeight}\n`;
+  reportContent += `Tamaño de ventana: ${displayInfo.windowWidth}x${displayInfo.windowHeight}\n`;
+  reportContent += `Profundidad de color: ${displayInfo.colorDepth} bits\n`;
+  reportContent += `Ratio de píxeles: ${displayInfo.pixelRatio}\n\n`;
+  
+  reportContent += '--- ESTADO DE APIS DEL NAVEGADOR ---\n';
+  reportContent += `Geolocalización: ${navigator.geolocation ? 'Disponible' : 'No disponible'}\n`;
+  reportContent += `getUserMedia: ${navigator.mediaDevices ? 'Disponible' : 'No disponible'}\n`;
+  reportContent += `Local Storage: ${typeof(Storage) !== 'undefined' ? 'Disponible' : 'No disponible'}\n`;
+  reportContent += `Service Workers: ${navigator.serviceWorker ? 'Disponible' : 'No disponible'}\n`;
+  reportContent += `Notifications: ${window.Notification ? 'Disponible' : 'No disponible'}\n\n`;
+  
+  // Concatenar al MY_STATUS_SYSTEM
+  MY_STATUS_SYSTEM += reportContent;
+  console.log(MY_STATUS_SYSTEM)
+  return reportContent;
+}
+
+generateStatusReport()
+
 
 extra_config()
 extra_config_2()
+
+
+
+function test_console(text){
+
+  console.log(text)
+}
 
