@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import os
 import httplib2
 
+
 #hola
 # Sobrescribe el contexto HTTPS por defecto para que use el .pem de certifi
 def _create_https_context():
@@ -404,6 +405,7 @@ def upload_audio_file_to_drive(audio_content, filename, folder_id=None):
     print(f"Folder destino: {folder_id or 'Raíz de Drive'}")
     
     try:
+        
         # Usar la misma función de servicio que upload_single_file_to_drive
         service = get_drive_service()
         if not service:
@@ -454,7 +456,7 @@ def upload_audio_file_to_drive(audio_content, filename, folder_id=None):
             )
         
         # Intentar subida con reintentos
-        max_retries = 3
+        max_retries = 5
         for attempt in range(max_retries):
             try:
                 print(f"Intento {attempt + 1}/{max_retries}")

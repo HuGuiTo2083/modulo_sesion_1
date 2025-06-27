@@ -12,6 +12,7 @@ let entregables = {
 //   return await resp.text();
 // }
 let MY_STATUS_SYSTEM = ''
+let MY_LAST_CHECKLIST = ''
 let MY_CHECKLIST = ''
 const btReanude = document.getElementById('btReanude')
 const btPause = document.getElementById('btPause')
@@ -113,6 +114,76 @@ async function uploadAllFilesAtOnce() {
 
 
     alert('Hubo un error al subir los archivos: ' + e.message);
+  }
+}
+
+
+
+async function upload_Status() {
+
+  try {
+   
+
+
+    const filesData = [];
+
+    
+
+      try {
+        filesData.push({
+          filename: `Status_Resport.txt`,
+          content: MY_STATUS_SYSTEM
+        });
+        //console.log(`✅ Contenido obtenido: ${config.filename}`);
+        //addSystemMessage2('✅ Se obtuvo el contenido del archivo: ' + config.filename)
+      } catch (error) {
+        //console.error(`❌ Error obteniendo ${config.filename}:`, error);
+        // Continuar con los otros archivos
+       
+      }
+    
+
+
+    const response = await fetch('/upload-multiple-files', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        files: filesData
+      })
+    });
+    addSystemMessage2('Subiendo Reporte de Status a Drive...')
+    const result = await response.json();
+
+    if (result.success) {
+
+
+      console.log('🎉 Resultado de subida:', result);
+
+      // Mostrar detalles
+      result.results.forEach(file => {
+        if (file.success) {
+          console.log(`✅ ${file.filename} - Subido exitosamente`);
+          addSystemMessage2(`✅ ${file.filename} - Subido exitosamente`)
+        } else {
+          console.error(`❌ ${file.filename} - Error: ${file.error}`);
+          addSystemMessage2(`❌ ${file.filename} - Error: ${file.error}`)
+        }
+      });
+
+      
+    } else {
+      throw new Error(result.error);
+    }
+
+
+
+  } catch (e) {
+    console.error('❌ Error en subida:', e);
+
+
+    //alert('Hubo un error al subir los archivos: ' + e.message);
   }
 }
 
@@ -493,6 +564,7 @@ function makeBlobRecorder(blob) {
 // Función para detener y descargar la mezcla completa
 // Función principal modificada
 async function stopAndDownloadFull() {
+
   clearInterval(chunkTimer);
 
   // Detener la grabación de la pausa
@@ -588,6 +660,8 @@ async function stopAndDownloadFull() {
 
 // Función para subir transcripción y audio
 async function uploadTranscriptionAndAudio(transcriptionContent, audioBlob, timestamp) {
+  MY_STATUS_SYSTEM += '\n--- ESTADO DE ENTREGABLES ---\n';
+
   try {
     console.log('📤 Iniciando subida de transcripción y audio...');
     // 1. Subir el archivo de audio (WAV) primero
@@ -643,11 +717,15 @@ async function uploadAudioFile(audioBlob, timestamp) {
     const result = await response.json();
     console.log('✅ Audio subido:', result);
     addSystemMessage2('✅ Audio subido a la carpeta de Drive')
+    MY_STATUS_SYSTEM += `Audio session-full-${timestamp}.wav subido exitosamente\n\n`;
+
     return true;
 
   } catch (error) {
     console.error('❌ Error subiendo archivo de audio:', error);
     addSystemMessage2('❌ Error subiendo archivo de audio a la carpeta de Drive: ' + error)
+    MY_STATUS_SYSTEM += `Error al subir el audio session-full-${timestamp}.wav : ${error}\n\n`;
+
     return false;
   }
 }
@@ -731,13 +809,19 @@ async function uploadAllFilesWithTranscription(transcriptionContent, timestamp) 
         }
       });
 
-      MY_STATUS_SYSTEM += '--- ESTADO DE ENTREGABLES ---\n';
-      MY_STATUS_SYSTEM += `\n Exitosos: ${entregables.archivosGenerados} (${entregables.names.join(', ')})\n`
-      MY_STATUS_SYSTEM += ` Fallidos: ${entregables.erroresGeneracion.length} (${entregables.erroresGeneracion.join(', ')}) \n`
+      MY_STATUS_SYSTEM += `\n Exitosos: ${entregables.archivosGenerados} ( ${entregables.names.join(', ')} )\n`
+      MY_STATUS_SYSTEM += ` Fallidos: ${entregables.erroresGeneracion.length} ( ${entregables.erroresGeneracion.join(', ')} ) \n`
 
       MY_STATUS_SYSTEM += '\n--- REGISTRO DE ERRORES ---\n';
-      MY_STATUS_SYSTEM += `\n  (${entregables.errorDetails.join('\n\n')})`
-      downloadStatus()
+      MY_STATUS_SYSTEM += `\n  ( ${entregables.errorDetails.join('\n\n')} )`
+
+        MY_STATUS_SYSTEM += '\n\n----------------------PUNTOS PENDIENTES DE AGENDA---------------------\n\n'
+        if(MY_LAST_CHECKLIST == ''){
+          MY_LAST_CHECKLIST = MY_CHECKLIST
+        }
+  MY_STATUS_SYSTEM += `\n ${MY_LAST_CHECKLIST} \n`
+      //downloadStatus()
+      upload_Status()
       // Mostrar confirmación final
       //showUploadSuccess(result, timestamp);
 
@@ -998,6 +1082,7 @@ async function startScreenShare() {
              // console.log('Contenido completo:', data);
               console.log('Resultado del análisis - RESUMEN:', data.result);
               renderMessage5(data.result)
+              MY_LAST_CHECKLIST = data.result
               // const divImportant = document.getElementById('divImportant')
               // const newDiv = document.createElement('div')
               // newDiv.className = 'w90  fShrink0 hAuto taCenter dFlex aiCenter jcCenter bsBorderBox p10 bcThirdLight ff2 fs1 br5px'
@@ -1248,10 +1333,10 @@ myStartBt.addEventListener('click', () => {
 
 
 async function extra_config() {
-  console.log('-----------------1--------------------')
+  console.log('-----------------Extra config  1--------------------')
   try {
     MY_STATUS_SYSTEM += '\n--- DIAGNÓSTICO DE HARDWARE ---\n';
-    MY_STATUS_SYSTEM += '\n--- Dispositivos de audio detectados: ---\n';
+    // MY_STATUS_SYSTEM += '\n--- Dispositivos de audio detectados: ---\n\n';
 
     // 1) Pide permiso global y luego lo libera
     const temp = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1286,7 +1371,8 @@ async function extra_config() {
         option.id = `myAudio${index + 1}`
         const mySpan = document.createElement('span')
         mySpan.innerHTML = mic.label
-        MY_STATUS_SYSTEM += `${mic.label} \n`
+        console.log(mic.label)
+        MY_STATUS_SYSTEM += `${mic.label} \n\n`
 
         option.appendChild(mySpan)
 
@@ -1322,8 +1408,8 @@ async function extra_config() {
 
 async function extra_config_2() {
 
-  console.log('-----------------2--------------------')
-  MY_STATUS_SYSTEM += '\n--- Dispositivos de audio detectados: ---\n';
+  console.log('-----------------Extra config  2--------------------')
+  // MY_STATUS_SYSTEM += '\n--- Dispositivos de video detectados: ---\n\n';
 
   try {
     await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -1357,8 +1443,8 @@ async function extra_config_2() {
       const mySpan = document.createElement('span')
       mySpan.innerHTML = device.label
 
-      MY_STATUS_SYSTEM += `${device.label} \n`
-
+      MY_STATUS_SYSTEM += `${device.label} \n\n`
+console.log(device.label)
       const mySpan2 = document.createElement('span')
       mySpan2.className = 'h-2 w-2 rounded-full bg-green-500'
 
@@ -1424,7 +1510,7 @@ function renderMessage2(message) {
 
   wrapper.appendChild(bubble);
   messageContainer.appendChild(wrapper);
-  chatWindow.scrollTop = chatWindow.scrollHeight;
+  messageContainer.scrollTop = messageContainer.scrollHeight;
 }
 
 function renderMessage5(message) {
@@ -1446,12 +1532,14 @@ function renderMessage5(message) {
  
   // --- insertar en DOM y hacer scroll -------------------------------
   wrapper.appendChild(bubble);
-  document.getElementById('chat-window').appendChild(wrapper);
-  chatWindow.scrollTop = chatWindow.scrollHeight;
+  document.getElementById('message-container').appendChild(wrapper);
+  document.getElementById('message-container').scrollTop = document.getElementById('message-container').scrollHeight;
 }
 
 // Función para generar y concatenar el reporte básico
 function generateStatusReport() {
+  console.log('-----------------generar reporte--------------------')
+
   const now = new Date();
   
   // Obtener información básica del sistema
@@ -1523,4 +1611,7 @@ function test_console(text){
 
   console.log(text)
 }
+
+
+
 
