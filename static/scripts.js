@@ -153,7 +153,7 @@ async function upload_Status() {
         files: filesData
       })
     });
-    addSystemMessage2('Subiendo Reporte de Status a Drive...')
+    addSystemMessage2('📤 Subiendo Reporte de Status a Drive...')
     const result = await response.json();
 
     if (result.success) {
@@ -187,6 +187,41 @@ async function upload_Status() {
   }
 }
 
+function htmlToPlainText(htmlString) {
+  // Crear un elemento temporal para manipular el HTML
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = htmlString;
+  
+  // Obtener todos los elementos <li>
+  const listItems = tempDiv.querySelectorAll('li');
+  
+  let plainText = '';
+  
+  listItems.forEach((li, index) => {
+    // Agregar numeración manual
+    plainText += `${index + 1}. `;
+    
+    // Procesar el contenido del <li>
+    let content = li.innerHTML;
+    
+    // Reemplazar <strong> tags - remover las etiquetas pero mantener el contenido
+    content = content.replace(/<strong>(.*?)<\/strong>/g, '$1');
+    
+    // Reemplazar <br> con saltos de línea
+    content = content.replace(/<br\s*\/?>/g, '\n');
+    
+    // Remover cualquier otra etiqueta HTML restante
+    content = content.replace(/<[^>]*>/g, '');
+    
+    // Limpiar espacios extra y saltos de línea múltiples
+    content = content.replace(/\n\s*\n/g, '\n').trim();
+    
+    plainText += content + '\n\n';
+  });
+  
+  // Limpiar el resultado final
+  return plainText.trim();
+}
 
 async function downloadFile(url, filename) {
   const resp = await fetch(url);
@@ -819,6 +854,7 @@ async function uploadAllFilesWithTranscription(transcriptionContent, timestamp) 
         if(MY_LAST_CHECKLIST == ''){
           MY_LAST_CHECKLIST = MY_CHECKLIST
         }
+        MY_LAST_CHECKLIST = htmlToPlainText(MY_LAST_CHECKLIST)
   MY_STATUS_SYSTEM += `\n ${MY_LAST_CHECKLIST} \n`
       //downloadStatus()
       upload_Status()
