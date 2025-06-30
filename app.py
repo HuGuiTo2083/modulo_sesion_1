@@ -687,7 +687,7 @@ def gen_frames(frame):
         """.strip()
         user_message = "Imagen en Base64:\n" + data_url
         payload = {
-          "model": "meta-llama/llama-4-maverick:free",
+          "model": "meta-llama/llama-4-maverick",
           "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {
@@ -699,7 +699,7 @@ def gen_frames(frame):
             }
           ],
           "temperature": 0.1,
-          "max_tokens": 500
+          "max_tokens": 1500
         }
         headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -803,6 +803,7 @@ import re
 #OPENROUTER_API_KEY = "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"
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_API_KEY_2 = os.getenv("OPENROUTER_API_KEY_2")
+OPENROUTER_API_KEY_3 = os.getenv("OPENROUTER_API_KEY_3")
 
 DEEPSEEK_MODEL = "deepseek/deepseek-r1:free"
 
@@ -830,30 +831,24 @@ def analyze_with_ai(frame):
         data_url = f"data:image/jpeg;base64,{img_base64}"
 
         SYSTEM_PROMPT = """
-Eres “ExtractorDeck v2”.
+Eres "ExtractorDeck v2".
 Analizas UN frame de pantalla (imagen) y devuelves SOLO un objeto JSON con esta forma:
 
 {
-  "tipo_documento":     "diapositiva" | "pdf" | "excel" | "documento" | "imagen" | "otro",
-  "titulo":             str | null,
-  "subtitulo":          str | null,
-  "bullets":            [str],          # máximo 7
-  "conceptos_clave":    [str],          # máximo 7
-  "frases_cita":        [str],          # citas textuales exactas
-  "preguntas":          [str],          # preguntas halladas
-  "llamado_accion":     str | null,     # call to action si existe
-  "tipo_slide":         "título" | "contenido" | "imagen" | "tabla" | "gráfico" | null,
-  "resumen_150":        str,            # ≤150 caracteres
-  "personas": [
-    {
-      "name":           str | null,     # nombre si aparece
-      "description":    str             # descripción/rol o apariencia
-    }
-  ]                   # lista vacía si no hay nadie
+  "tipo_documento": "diapositiva",
+  "titulo": "Título encontrado",
+  "subtitulo": null,
+  "bullets": ["punto 1", "punto 2"],
+  "conceptos_clave": ["concepto 1", "concepto 2"],
+  "frases_cita": ["cita exacta"],
+  "preguntas": ["¿pregunta encontrada?"],
+  "llamado_accion": "acción requerida",
+  "tipo_slide": "contenido",
+  "resumen_150": "resumen breve del contenido",
+  "personas": []
 }
 
-— Si un campo no aplica, usa null o [] según corresponda.
-— No añadas explicaciones ni ningún otro texto: SOLO JSON válido.
+IMPORTANTE: Responde ÚNICAMENTE con JSON válido y completo. No uses backticks ni explicaciones.
 """
 
         # Construimos el prompt (texto) que quieres analizar
@@ -865,7 +860,7 @@ Analizas UN frame de pantalla (imagen) y devuelves SOLO un objeto JSON con esta 
         # Ahora armamos un payload usando "messages" con "text" e "image_url".
         # Supuestamente, el modelo "meta-llama/llama-4-maverick:free" aceptaría imagen_url.
         payload = {
-            "model": "meta-llama/llama-4-maverick:free",  # <--- supuesta "Llama 4 Maverick"
+            "model": "meta-llama/llama-4-maverick",  # <--- supuesta "Llama 4 Maverick"
             "messages": [
                   {"role": "system", "content": SYSTEM_PROMPT},
                 {
@@ -887,7 +882,7 @@ Analizas UN frame de pantalla (imagen) y devuelves SOLO un objeto JSON con esta 
                     ]
                 }
             ],
-            "max_tokens": 500,
+            "max_tokens": 3000,
             "temperature": 0.1
         }
 
@@ -895,7 +890,7 @@ Analizas UN frame de pantalla (imagen) y devuelves SOLO un objeto JSON con esta 
         #print(payload)
 
         headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Authorization": f"Bearer {OPENROUTER_API_KEY_3}",
             "HTTP-Referer": "https://openrouter.ai/api/v1",
             "Content-Type": "application/json"
         }
@@ -905,7 +900,7 @@ Analizas UN frame de pantalla (imagen) y devuelves SOLO un objeto JSON con esta 
             "https://openrouter.ai/api/v1/chat/completions",
             headers=headers,
             json=payload,
-            timeout=15
+            timeout=60
         )
 
         # Eliminar archivo temporal
@@ -913,7 +908,7 @@ Analizas UN frame de pantalla (imagen) y devuelves SOLO un objeto JSON con esta 
         # Procesar respuesta
         if response.status_code == 200:
             data = response.json()
-            #print("[DEBUG] response.json() completo:", data)
+            print("[DEBUG] response.json() completo:", data)
             # Podríamos analizar "choices", "message", etc.
             if "choices" in data and len(data["choices"]) > 0:
                 content = data["choices"][0]["message"]["content"]
@@ -932,10 +927,6 @@ Analizas UN frame de pantalla (imagen) y devuelves SOLO un objeto JSON con esta 
     except Exception as e:
         traceback.print_exc()
         return f"Error análisis IA: {str(e)}"
-
-
-
-
 
 
 
@@ -985,7 +976,7 @@ def analyze_with_ai2(frame):
         # Ahora armamos un payload usando "messages" con "text" e "image_url".
         # Supuestamente, el modelo "meta-llama/llama-4-maverick:free" aceptaría imagen_url.
         payload = {
-            "model": "meta-llama/llama-4-maverick:free",  # <--- supuesta "Llama 4 Maverick"
+            "model": "meta-llama/llama-4-maverick",  # <--- supuesta "Llama 4 Maverick"
             "messages": [
                    {"role": "system", "content": SYSTEM_SCENE},
                 {
@@ -1007,7 +998,7 @@ def analyze_with_ai2(frame):
                     ]
                 }
             ],
-            "max_tokens": 500,
+            "max_tokens": 1500,
             "temperature": 0.1
         }
 
@@ -1163,7 +1154,7 @@ Recuerda: Tu objetivo es ser los "ojos inteligentes" del usuario, capturando rá
         # Ahora armamos un payload usando "messages" con "text" e "image_url".
         # Supuestamente, el modelo "meta-llama/llama-4-maverick:free" aceptaría imagen_url.
         payload = {
-            "model": "meta-llama/llama-4-maverick:free",  # <--- supuesta "Llama 4 Maverick"
+            "model": "meta-llama/llama-4-maverick",  # <--- supuesta "Llama 4 Maverick"
             "messages": [
                   {"role": "system", "content": SYSTEM_PROMPT},
                 {
@@ -1185,7 +1176,7 @@ Recuerda: Tu objetivo es ser los "ojos inteligentes" del usuario, capturando rá
                     ]
                 }
             ],
-            "max_tokens": 500,
+            "max_tokens": 1500,
             "temperature": 0.1
         }
 
@@ -1284,7 +1275,7 @@ Devuelve **solo** los ítems pendientes en el mismo orden en que aparecen en el 
         # Ahora armamos un payload usando "messages" con "text" e "image_url".
         # Supuestamente, el modelo "meta-llama/llama-4-maverick:free" aceptaría imagen_url.
         payload = {
-            "model": "meta-llama/llama-4-maverick:free",  # <--- supuesta "Llama 4 Maverick"
+            "model": "meta-llama/llama-4-maverick",  # <--- supuesta "Llama 4 Maverick"
             "messages": [
                   {"role": "system", "content": SYSTEM_PROMPT},
                 {
@@ -1297,7 +1288,7 @@ Devuelve **solo** los ítems pendientes en el mismo orden en que aparecen en el 
                     ]
                 }
             ],
-            "max_tokens": 500,
+            "max_tokens": 1500,
             "temperature": 0.1
         }
 
@@ -1399,7 +1390,7 @@ Formato de salida requerido:
                     ]
                 }
             ],
-            "max_tokens": 500,
+            "max_tokens": 1500,
             "temperature": 0.1
         }
 
@@ -1444,8 +1435,6 @@ Formato de salida requerido:
     except Exception as e:
         traceback.print_exc()
         return f"Error análisis IA: {str(e)}"
-
-
 
 
 
@@ -1554,6 +1543,7 @@ def process_audio():
     try:
         # 1) Verificar si se ha recibido el archivo de audio
         audio_file = request.files.get("audio")
+        timestamp = request.form.get("timestamp")  
         if not audio_file:
             return jsonify({"error": "No se recibió ningún archivo de audio"}), 400
 
@@ -1585,7 +1575,7 @@ def process_audio():
         # 4) Guardar la información generada en el buffer con mejor formato
         audio_data = {
             "id": len(audio_b_buffer) + 1,  # ID secuencial para identificar cada procesamiento
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # Formato más legible
+            "timestamp": f"{datetime.now().strftime("%Y-%m-%d")} {timestamp}",  # Formato más legible
             "audio_info": {
                 "filename": audio_file.filename if audio_file.filename else "unknown",
                 "content_type": audio_file.content_type if audio_file.content_type else "unknown"
@@ -1678,6 +1668,8 @@ def transcribe_audio():
     except Exception as e:
         app.logger.error(f"Error en Whisper: {e}")
         return jsonify({"error": str(e)}), 500
+
+
 
 myChecklist = ''
     
@@ -1853,6 +1845,37 @@ def resume_important():
             traceback.print_exc()
             return jsonify({'status': 'error', 'message': 'Error interno del servidor: ' + str(e)}), 500
 
+
+# Endpoint para reiniciar variables globales
+@app.route('/reset-variables', methods=['POST'])
+def reset_variables():
+    global myIndex_Resume, myBufferImportant, log_buffer, eye_c_buffer, screen_buffer, audio_a_buffer, audio_b_buffer, audio_samplerates, audio_threads, myChecklist
+    
+    # Reiniciar todas las variables globales a sus valores iniciales
+    myChecklist = ''
+    audio_samplerates = {}
+    myIndex_Resume = 0
+    myBufferImportant = []
+    log_buffer = []
+    screen_buffer =[]
+    eye_c_buffer = []
+    audio_a_buffer = []
+    audio_b_buffer = []
+    audio_threads = []
+   
+    
+    return jsonify({
+        'success': True,
+        'message': 'Variables globales reiniciadas correctamente',
+        'timestamp': __import__('datetime').datetime.now().isoformat(),
+        'estado_actual': {
+            'myIndex_Resume': myIndex_Resume,
+            'myBufferImportant': myBufferImportant
+        }
+    })
+
+
+
 @app.route('/generate_checklist', methods=['POST'])
 def gen_check():
     global myChecklist
@@ -1868,7 +1891,6 @@ def gen_check():
         'checklist': myInfo,
         'message': 'Checklist generado correctamente'
     })
-
 
 
 

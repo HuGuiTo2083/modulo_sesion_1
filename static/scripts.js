@@ -122,26 +122,26 @@ async function uploadAllFilesAtOnce() {
 async function upload_Status() {
 
   try {
-   
+
 
 
     const filesData = [];
 
-    
 
-      try {
-        filesData.push({
-          filename: `Status_Resport.txt`,
-          content: MY_STATUS_SYSTEM
-        });
-        //console.log(`✅ Contenido obtenido: ${config.filename}`);
-        //addSystemMessage2('✅ Se obtuvo el contenido del archivo: ' + config.filename)
-      } catch (error) {
-        //console.error(`❌ Error obteniendo ${config.filename}:`, error);
-        // Continuar con los otros archivos
-       
-      }
-    
+
+    try {
+      filesData.push({
+        filename: `Status_Resport.txt`,
+        content: MY_STATUS_SYSTEM
+      });
+      //console.log(`✅ Contenido obtenido: ${config.filename}`);
+      //addSystemMessage2('✅ Se obtuvo el contenido del archivo: ' + config.filename)
+    } catch (error) {
+      //console.error(`❌ Error obteniendo ${config.filename}:`, error);
+      // Continuar con los otros archivos
+
+    }
+
 
 
     const response = await fetch('/upload-multiple-files', {
@@ -172,7 +172,7 @@ async function upload_Status() {
         }
       });
 
-      
+
     } else {
       throw new Error(result.error);
     }
@@ -191,34 +191,34 @@ function htmlToPlainText(htmlString) {
   // Crear un elemento temporal para manipular el HTML
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = htmlString;
-  
+
   // Obtener todos los elementos <li>
   const listItems = tempDiv.querySelectorAll('li');
-  
+
   let plainText = '';
-  
+
   listItems.forEach((li, index) => {
     // Agregar numeración manual
     plainText += `${index + 1}. `;
-    
+
     // Procesar el contenido del <li>
     let content = li.innerHTML;
-    
+
     // Reemplazar <strong> tags - remover las etiquetas pero mantener el contenido
     content = content.replace(/<strong>(.*?)<\/strong>/g, '$1');
-    
+
     // Reemplazar <br> con saltos de línea
     content = content.replace(/<br\s*\/?>/g, '\n');
-    
+
     // Remover cualquier otra etiqueta HTML restante
     content = content.replace(/<[^>]*>/g, '');
-    
+
     // Limpiar espacios extra y saltos de línea múltiples
     content = content.replace(/\n\s*\n/g, '\n').trim();
-    
+
     plainText += content + '\n\n';
   });
-  
+
   // Limpiar el resultado final
   return plainText.trim();
 }
@@ -244,7 +244,7 @@ let chunkTimer;
 let mainTranscription
 let multipleRecorders = []
 let partialRecorderPause;
-let transcrip 
+let transcrip
 // 1) Arranca ambos recorders
 
 async function startRecordingAllMics() {
@@ -450,8 +450,11 @@ async function startRecordingAllMics() {
         partialRecorder2.stop();
         partialRecorder2.exportWAV(async (blob) => {
           const form = new FormData();
-          form.append("audio", blob, `chunk-${Date.now()}.wav`);
+          const now = new Date();
+          const timeStamp = `${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
 
+          form.append("audio", blob, `chunk-${Date.now()}.wav`);
+          form.append("timestamp", timeStamp); 
           const res = await fetch("/process_audio", {
             method: "POST",
             body: form
@@ -763,9 +766,41 @@ async function uploadAudioFile(audioBlob, timestamp) {
     console.error('❌ Error subiendo archivo de audio:', error);
     addSystemMessage2('❌ Error subiendo archivo de audio a la carpeta de Drive: ' + error)
     MY_STATUS_SYSTEM += `Error al subir el audio session-full-${timestamp}.wav : ${error}\n\n`;
-
+    // 🔥 DESCARGA LOCAL COMO RESPALDO
+    try {
+      addSystemMessage2('📁 Se descargará el audio localmente...');
+      downloadAudioLocally(audioBlob, timestamp);
+      console.log('📁 Archivo descargado localmente como respaldo');
+      addSystemMessage2('✅ Archivo descargado localmente como respaldo');
+      MY_STATUS_SYSTEM += `Audio session-full-${timestamp}.wav descargado localmente como respaldo\n\n`;
+    } catch (downloadError) {
+      console.error('❌ Error en descarga de respaldo:', downloadError);
+      addSystemMessage2('❌ Error en descarga de respaldo: ' + downloadError);
+    }
     return false;
   }
+}
+
+
+// 📁 Función para descargar el archivo localmente
+function downloadAudioLocally(audioBlob, timestamp) {
+  // Crear URL del blob
+  const audioUrl = URL.createObjectURL(audioBlob);
+  
+  // Crear elemento <a> para la descarga
+  const downloadLink = document.createElement('a');
+  downloadLink.href = audioUrl;
+  downloadLink.download = `session-full-${timestamp}.wav`;
+  
+  // Agregar al DOM temporalmente (necesario para algunos navegadores)
+  document.body.appendChild(downloadLink);
+  
+  // Simular click para iniciar descarga
+  downloadLink.click();
+  
+  // Limpiar: remover del DOM y liberar URL
+  document.body.removeChild(downloadLink);
+  URL.revokeObjectURL(audioUrl);
 }
 //karen
 // Función para subir archivos de texto (modificada de tu función original)
@@ -853,12 +888,12 @@ async function uploadAllFilesWithTranscription(transcriptionContent, timestamp) 
       MY_STATUS_SYSTEM += '\n--- REGISTRO DE ERRORES ---\n';
       MY_STATUS_SYSTEM += `\n  ( ${entregables.errorDetails.join('\n\n')} )`
 
-        MY_STATUS_SYSTEM += '\n\n----------------------PUNTOS PENDIENTES DE AGENDA---------------------\n\n'
-        if(MY_LAST_CHECKLIST == ''){
-          MY_LAST_CHECKLIST = MY_CHECKLIST
-        }
-        MY_LAST_CHECKLIST = htmlToPlainText(MY_LAST_CHECKLIST)
-  MY_STATUS_SYSTEM += `\n ${MY_LAST_CHECKLIST} \n`
+      MY_STATUS_SYSTEM += '\n\n----------------------PUNTOS PENDIENTES DE AGENDA---------------------\n\n'
+      if (MY_LAST_CHECKLIST == '') {
+        MY_LAST_CHECKLIST = MY_CHECKLIST
+      }
+      MY_LAST_CHECKLIST = htmlToPlainText(MY_LAST_CHECKLIST)
+      MY_STATUS_SYSTEM += `\n ${MY_LAST_CHECKLIST} \n`
       //downloadStatus()
       upload_Status()
       // Mostrar confirmación final
@@ -874,25 +909,25 @@ async function uploadAllFilesWithTranscription(transcriptionContent, timestamp) 
   }
 }
 
-function downloadStatus(){
- // 1. Crear un blob de tipo texto
- const blob = new Blob([MY_STATUS_SYSTEM], { type: 'text/plain;charset=utf-8' });
+function downloadStatus() {
+  // 1. Crear un blob de tipo texto
+  const blob = new Blob([MY_STATUS_SYSTEM], { type: 'text/plain;charset=utf-8' });
 
- // 2. Generar una URL temporal para ese blob
- const url = URL.createObjectURL(blob);
+  // 2. Generar una URL temporal para ese blob
+  const url = URL.createObjectURL(blob);
 
- // 3. Crear (o reutilizar) un enlace oculto con el atributo download
- const link = document.createElement('a');
- link.href = url;
- link.download = 'status.txt';          // nombre del archivo
- document.body.appendChild(link);       // requerido en Firefox
+  // 3. Crear (o reutilizar) un enlace oculto con el atributo download
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'status.txt';          // nombre del archivo
+  document.body.appendChild(link);       // requerido en Firefox
 
- // 4. Simular clic para iniciar la descarga
- link.click();
+  // 4. Simular clic para iniciar la descarga
+  link.click();
 
- // 5. Limpieza
- document.body.removeChild(link);       // opcional: quitar el enlace
- URL.revokeObjectURL(url);              // liberar la URL temporal
+  // 5. Limpieza
+  document.body.removeChild(link);       // opcional: quitar el enlace
+  URL.revokeObjectURL(url);              // liberar la URL temporal
 
 }
 
@@ -1061,7 +1096,7 @@ async function startScreenShare() {
 
         //huhm
         try {
-            console.log('======OJOS B=====');
+          console.log('======OJOS B=====');
 
           const response = await fetch('/upload_frame', {
             method: 'POST',
@@ -1074,7 +1109,8 @@ async function startScreenShare() {
           if (!response.ok) {
             console.error('Error enviando frame al servidor');
           } else {
-            console.log('Frame enviado con éxito:' , response.json());
+            const res = await response.json()
+            console.log('Frame enviado con éxito:', res);
           }
         } catch (error) {
           console.error('Error en fetch:', error);
@@ -1083,7 +1119,7 @@ async function startScreenShare() {
 
       }
     }
-  //Checklit con imagen cada 1.5 minutos
+    //Checklit con imagen cada 1.5 minutos
     async function captureAndSendFrame2() {
       if (video.videoWidth && video.videoHeight) {
         console.log('======Cheklist Imagen======');
@@ -1122,7 +1158,7 @@ async function startScreenShare() {
               // Leer el contenido JSON de la respuesta
               const data = await response.json();
               console.log('Frame enviado con éxito');
-             // console.log('Contenido completo:', data);
+              // console.log('Contenido completo:', data);
               console.log('Resultado del análisis - RESUMEN:', data.result);
               renderMessage5(data.result)
               MY_LAST_CHECKLIST = data.result
@@ -1175,8 +1211,8 @@ async function listAndShowCams() {
 
   const devices = await navigator.mediaDevices.enumerateDevices();
   const videoInputs = devices.filter(device => device.kind === 'videoinput');
-  ;const test_camera = document.getElementById('test-camera')
-  test_camera.style.display='none'
+  ; const test_camera = document.getElementById('test-camera')
+  test_camera.style.display = 'none'
   console.log('cams: ' + videoInputs)
   // Array para almacenar objetos con video y canvas para cada cámara
   const activeCams = [];
@@ -1321,7 +1357,7 @@ async function listAndShowCams() {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const frameBase64 = canvas.toDataURL('image/jpeg'); // Base64 jpg
-        if (document.getElementById(`myVideo${deviceId}`).classList.contains('select')) {
+        //if (document.getElementById(`myVideo${deviceId}`).classList.contains('select')) {
           // console.log('***camara activa***')
           //huhm
           try {
@@ -1336,14 +1372,14 @@ async function listAndShowCams() {
             if (!response.ok) {
               console.error(`Error enviando frame de cámara ${index + 1}`);
             } else {
-              Opcional: console.log(`Frame cámara ${index + 1} enviado`);
+              console.log(`Frame cámara ${index + 1} enviado`);
             }
           } catch (error) {
             console.error(`Error en fetch para cámara ${index + 1}:`, error);
           }
 
 
-        }
+        //}
 
 
       }
@@ -1367,6 +1403,9 @@ myStartBt.addEventListener('click', () => {
   // myStartBt.classList.toggle('bcThird2')
   // myBtChangeWindow.classList.toggle('bcThird2')
   // downloadAll.classList.toggle('bcThird2')
+
+
+
   startRecordingAllMics();
   listAndShowCams();
 
@@ -1488,7 +1527,7 @@ async function extra_config_2() {
       mySpan.innerHTML = device.label
 
       MY_STATUS_SYSTEM += `${device.label} \n\n`
-console.log(device.label)
+      console.log(device.label)
       const mySpan2 = document.createElement('span')
       mySpan2.className = 'h-2 w-2 rounded-full bg-green-500'
 
@@ -1568,12 +1607,12 @@ function renderMessage5(message) {
   bubble.className =
     `max-w-xs p-3 rounded-lg text-sm bg-chat-light text-mc-blue-dark border border-gray-200`
 
-  
-    // 3) Texto simple
-    bubble.innerHTML = `${message}`;
-  
 
- 
+  // 3) Texto simple
+  bubble.innerHTML = `${message}`;
+
+
+
   // --- insertar en DOM y hacer scroll -------------------------------
   wrapper.appendChild(bubble);
   document.getElementById('message-container').appendChild(wrapper);
@@ -1585,58 +1624,58 @@ function generateStatusReport() {
   console.log('-----------------generar reporte--------------------')
 
   const now = new Date();
-  
+
   // Obtener información básica del sistema
   const systemInfo = {
-      timestamp: now.toISOString(),
-      fecha: now.toLocaleDateString('es-MX'),
-      hora: now.toLocaleTimeString('es-MX'),
-      userAgent: navigator.userAgent,
-      platform: navigator.platform,
-      language: navigator.language,
-      cookiesEnabled: navigator.cookieEnabled,
-      onlineStatus: navigator.onLine ? 'Conectado' : 'Sin conexión'
+    timestamp: now.toISOString(),
+    fecha: now.toLocaleDateString('es-MX'),
+    hora: now.toLocaleTimeString('es-MX'),
+    userAgent: navigator.userAgent,
+    platform: navigator.platform,
+    language: navigator.language,
+    cookiesEnabled: navigator.cookieEnabled,
+    onlineStatus: navigator.onLine ? 'Conectado' : 'Sin conexión'
   };
 
   // Información de la ventana/pantalla
   const displayInfo = {
-      screenWidth: screen.width,
-      screenHeight: screen.height,
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
-      colorDepth: screen.colorDepth,
-      pixelRatio: window.devicePixelRatio
+    screenWidth: screen.width,
+    screenHeight: screen.height,
+    windowWidth: window.innerWidth,
+    windowHeight: window.innerHeight,
+    colorDepth: screen.colorDepth,
+    pixelRatio: window.devicePixelRatio
   };
 
   // Generar el contenido del reporte
   let reportContent = '';
-  
+
   reportContent += '='.repeat(60) + '\n';
   reportContent += '           REPORTE DE ESTADO DEL SISTEMA\n';
   reportContent += '='.repeat(60) + '\n';
   reportContent += `Generado: ${systemInfo.fecha} a las ${systemInfo.hora}\n`;
   reportContent += `Timestamp: ${systemInfo.timestamp}\n\n`;
-  
+
   reportContent += '--- INFORMACIÓN DEL SISTEMA ---\n';
   reportContent += `Estado de conexión: ${systemInfo.onlineStatus}\n`;
   reportContent += `Idioma del navegador: ${systemInfo.language}\n`;
   reportContent += `Plataforma: ${systemInfo.platform}\n`;
   reportContent += `Cookies habilitadas: ${systemInfo.cookiesEnabled ? 'Sí' : 'No'}\n`;
   reportContent += `User Agent: ${systemInfo.userAgent}\n\n`;
-  
+
   reportContent += '--- INFORMACIÓN DE PANTALLA ---\n';
   reportContent += `Resolución de pantalla: ${displayInfo.screenWidth}x${displayInfo.screenHeight}\n`;
   reportContent += `Tamaño de ventana: ${displayInfo.windowWidth}x${displayInfo.windowHeight}\n`;
   reportContent += `Profundidad de color: ${displayInfo.colorDepth} bits\n`;
   reportContent += `Ratio de píxeles: ${displayInfo.pixelRatio}\n\n`;
-  
+
   reportContent += '--- ESTADO DE APIS DEL NAVEGADOR ---\n';
   reportContent += `Geolocalización: ${navigator.geolocation ? 'Disponible' : 'No disponible'}\n`;
   reportContent += `getUserMedia: ${navigator.mediaDevices ? 'Disponible' : 'No disponible'}\n`;
-  reportContent += `Local Storage: ${typeof(Storage) !== 'undefined' ? 'Disponible' : 'No disponible'}\n`;
+  reportContent += `Local Storage: ${typeof (Storage) !== 'undefined' ? 'Disponible' : 'No disponible'}\n`;
   reportContent += `Service Workers: ${navigator.serviceWorker ? 'Disponible' : 'No disponible'}\n`;
   reportContent += `Notifications: ${window.Notification ? 'Disponible' : 'No disponible'}\n\n`;
-  
+
   // Concatenar al MY_STATUS_SYSTEM
   MY_STATUS_SYSTEM += reportContent;
   console.log(MY_STATUS_SYSTEM)
@@ -1649,9 +1688,44 @@ generateStatusReport()
 extra_config()
 extra_config_2()
 
+async function reiniciarVariablesGlobales() {
+  try {
+    // Mostrar indicador de carga
 
 
-function test_console(text){
+    const response = await fetch('/reset-variables', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Mostrar mensaje de éxito
+    console.log('success', data.message);
+
+
+
+    return data;
+
+  } catch (error) {
+    console.error('Error al reiniciar variables:', error);
+
+  } finally {
+
+  }
+}
+
+
+reiniciarVariablesGlobales()
+
+function test_console(text) {
 
   console.log(text)
 }
