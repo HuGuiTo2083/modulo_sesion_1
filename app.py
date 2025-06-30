@@ -1377,7 +1377,7 @@ Formato de salida requerido:
         # Ahora armamos un payload usando "messages" con "text" e "image_url".
         # Supuestamente, el modelo "meta-llama/llama-4-maverick:free" aceptaría imagen_url.
         payload = {
-            "model": "meta-llama/llama-4-maverick:free",  # <--- supuesta "Llama 4 Maverick"
+            "model": "meta-llama/llama-4-maverick",  # <--- supuesta "Llama 4 Maverick"
             "messages": [
                   {"role": "system", "content": SYSTEM_PROMPT},
                 {
